@@ -1,0 +1,25 @@
+#!/usr/bin/env dataviewer
+
+[dataview]
+type = "xy"
+title = "xSquare"
+x_title = "x"
+y_title = "y"
+description = """
+xSquare
+"""
+
+[chart.1]
+title = "Download"
+
+[data.1]
+data = [
+0, 0,
+1, 1,
+2, 2,
+3, 4,
+4, 8,
+5, 16,
+6, 32,
+]
+

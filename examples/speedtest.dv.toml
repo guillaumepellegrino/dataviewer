@@ -1,0 +1,45 @@
+#!/usr/bin/env dataviewer
+
+[dataview]
+type = "xy"
+title = "Speedtest"
+x_title = "Time (s)"
+y_title = "Througtput (Mbps)"
+description = """
+TCP Speedtest download and upload througtput,
+measured with iperf3
+"""
+
+[chart.1]
+title = "Download"
+
+[chart.2]
+title = "Upload"
+
+[data.1]
+data = [
+1, 731,
+2, 887,
+3, 953,
+4, 992,
+5, 991,
+6, 992,
+7, 990,
+8, 993,
+9, 991,
+10, 990,
+]
+
+[data.2]
+data = [
+1, 60,
+2, 72,
+3, 95,
+4, 99,
+5, 98,
+6, 99,
+7, 99,
+8, 98,
+9, 99,
+10, 99,
+]
