@@ -14,6 +14,8 @@ pub struct DataViewer {
     file: dataview::File,
     chart: Option<Box<dyn chart::Chart>>,
     range: Range,
+    width: f64,
+    height: f64,
     mouse_is_pressed: bool,
     mouse_xref: f64,
     mouse_yref: f64,
@@ -26,6 +28,8 @@ impl DataViewer {
             file: dataview::File::default(),
             chart: None,
             range: Range::new(),
+            width: 1.0,
+            height: 1.0,
             mouse_is_pressed: false,
             mouse_xref: 0.0,
             mouse_yref: 0.0,
@@ -44,35 +48,13 @@ impl DataViewer {
         };
         self.range = chart.range(&self.file).margin();
         self.chart = Some(chart);
-        /*
-        let file = File::open(path)?;
-        let mut reader = BufReader::new(file);
-
-        // Verify this is a dataviewer file
-        let mut program = String::new();
-        reader.read_line(&mut program)?;
-        if !program.contains("dataviewer") {
-            return Err(eyre!("Not a dataviewer file"));
-        }
-
-        // Create a chart of the specified type
-        let mut chart = String::new();
-        reader.read_line(&mut chart)?;
-        let mut chart = match chart.as_str() {
-            "xy\n" => Box::new(xy::XY::default()),
-            _ => {return Err(eyre!("Unknown chart format '{}'", chart));},
-        };
-
-        // Load data into the chart
-        chart.load(&mut reader)?;
-        self.chart = Some(chart);
-        */
-
         Ok(())
     }
 
     // TODO: implement zoomin(), zoomout(), move()
-    pub fn draw(&self, area: &gtk::DrawingArea, cairo: &cairo::Context, width: i32, height: i32) {
+    pub fn draw(&mut self, area: &gtk::DrawingArea, cairo: &cairo::Context, width: i32, height: i32) {
+        self.width = width.into();
+        self.height = height.into();
         let chart = match &self.chart {
             Some(chart) => chart,
             None => {return;},
@@ -83,12 +65,15 @@ impl DataViewer {
     }
 
     fn move_canvas(&mut self, dx: f64, dy: f64) {
-        println!("move {}x{}", dx, dy);
+        let range_x = self.range.x_max - self.range.x_min;
+        let dx = (dx * range_x) / self.width;
+        self.range.x_min -= dx;
+        self.range.x_max -= dx;
 
-        self.range.x_min += dx / 10.0;
-        self.range.x_max += dx / 10.0;
-        self.range.y_min += dy / 10.0;
-        self.range.y_max += dy / 10.0;
+        let range_y = self.range.y_max - self.range.y_min;
+        let dy = (dy * range_y) / self.height;
+        self.range.y_min += dy;
+        self.range.y_max += dy;
     }
 
     pub fn mouse_clicked(&mut self, x: f64, y: f64) {

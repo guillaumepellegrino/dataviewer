@@ -34,7 +34,7 @@ fn new_draw_area_from_dataviewer(g_dataviewer: Rc<RefCell<viewer::DataViewer>>) 
     let dataviewer = g_dataviewer.clone();
     draw_area.set_draw_func(move |draw_area, cairo, width, height| {
         println!("Draw area {}x{}", width, height);
-        let dataviewer = dataviewer.borrow();
+        let mut dataviewer = dataviewer.borrow_mut();
         dataviewer.draw(draw_area, cairo, width, height);
     });
 
