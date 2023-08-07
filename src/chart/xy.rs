@@ -28,27 +28,9 @@ impl Chart for XY {
     */
 
     fn view(&self, file: &dataview::File) -> View {
-        let mut view = View::new();
-
-        for (_, data) in &file.data {
-            let iter = data.pair_iter();
-            for (x, y) in iter {
-                if x < view.x_min {
-                    view.x_min = x;
-                }
-                if x > view.x_max {
-                    view.x_max = x;
-                }
-                if y < view.y_min {
-                    view.y_min = y;
-                }
-                if y > view.y_max {
-                    view.y_max = y;
-                }
-            }
-        }
-
-        view
+        View::xy_minmax(file)
+            .show_axis()
+            .margin()
     }
 
     fn draw(&self, canvas: &Canvas, file: &dataview::File) {
@@ -63,13 +45,5 @@ impl Chart for XY {
                 canvas.line_to(x, y);
             }
         }
-        /*
-        let first = &self.points[0];
-        canvas.move_to(first.0, first.1);
-        for point in &self.points {
-            //canvas.rectangle(point.0, point.1);
-            canvas.line_to(point.0, point.1);
-        }
-        */
     }
 }

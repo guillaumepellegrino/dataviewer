@@ -43,7 +43,7 @@ impl DataViewer {
             dataview::Type::XY => Box::new(xy::XY::default()),
             r#type => {return Err(eyre!("Unimplemented format '{:?}'", r#type));},
         };
-        self.view = chart.view(&self.file).margin();
+        self.view = chart.view(&self.file);
         self.chart = Some(chart);
         Ok(())
     }

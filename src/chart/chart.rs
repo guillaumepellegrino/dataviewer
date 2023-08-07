@@ -19,6 +19,45 @@ impl View {
         }
     }
 
+    pub fn xy_minmax(file: &dataview::File) -> Self {
+        let mut view = Self::new();
+        for (_, data) in &file.data {
+            let iter = data.pair_iter();
+            for (x, y) in iter {
+                if x < view.x_min {
+                    view.x_min = x;
+                }
+                if x > view.x_max {
+                    view.x_max = x;
+                }
+                if y < view.y_min {
+                    view.y_min = y;
+                }
+                if y > view.y_max {
+                    view.y_max = y;
+                }
+            }
+        }
+        view
+    }
+
+    pub fn show_axis(&self) -> Self {
+        let mut new = self.clone();
+        if new.x_min > 0.0 {
+            new.x_min = 0.0;
+        }
+        if new.x_max < 0.0 {
+            new.x_max = 0.0;
+        }
+        if new.y_min > 0.0 {
+            new.y_min = 0.0;
+        }
+        if new.y_max < 0.0 {
+            new.y_max = 0.0;
+        }
+        new
+    }
+
     pub fn margin(&self) -> Self {
         let x_range = self.x_max - self.x_min;
         let y_range = self.y_max - self.y_min;
