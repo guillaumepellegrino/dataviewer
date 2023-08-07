@@ -48,7 +48,6 @@ impl DataViewer {
         Ok(())
     }
 
-    // TODO: implement zoomin(), zoomout(), move()
     pub fn draw(&mut self, area: &gtk::DrawingArea, cairo: &cairo::Context, width: i32, height: i32) {
         self.width = width.into();
         self.height = height.into();

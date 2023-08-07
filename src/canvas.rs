@@ -25,7 +25,10 @@ impl<'a> Canvas<'a> {
         // x_min        x           x_max
         //
         // 1. normalize x => [0, 1]
-        // 2. pixel = x * width
+        // 2. pixel = x_norm * width
+        //
+        // x_norm = (x - x_min) / (x_max - x_min)
+        // x_pixel = x_norm * width
         let x_range = self.range.x_max - self.range.x_min;
         let x_norm = (x - self.range.x_min) / x_range;
         x_norm * self.width
