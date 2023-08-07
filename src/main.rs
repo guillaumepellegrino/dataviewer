@@ -3,8 +3,6 @@ use gtk::prelude::*;
 use std::rc::Rc;
 use std::cell::RefCell;
 use std::path::PathBuf;
-use gtk4::glib::translate::ToGlibPtr;
-use gtk4::traits::WidgetExt;
 
 mod canvas;
 mod chart;
@@ -42,13 +40,11 @@ fn new_draw_area_from_dataviewer(g_dataviewer: Rc<RefCell<viewer::DataViewer>>) 
     let key_ctl = gtk::GestureClick::new();
     let dataviewer = g_dataviewer.clone();
     key_ctl.connect_pressed(move |_,_,x,y| {
-        //println!("Key pressed@{}x{}!", x, y);
         let mut dataviewer = dataviewer.borrow_mut();
         dataviewer.mouse_clicked(x, y);
     });
     let dataviewer = g_dataviewer.clone();
     key_ctl.connect_released(move |_,_,_,_| {
-        //println!("Key released@{}x{}!", x, y);
         let mut dataviewer = dataviewer.borrow_mut();
         dataviewer.mouse_released();
     });
@@ -56,22 +52,27 @@ fn new_draw_area_from_dataviewer(g_dataviewer: Rc<RefCell<viewer::DataViewer>>) 
 
     // Notify DataViewer when mouse is moved
     let motion_ctl = gtk::EventControllerMotion::new();
-    //motion_ctl.connect_enter(move |_,x,y| {
-    //    println!("enter@{}x{}!", x, y);
-    //});
     let dataviewer = g_dataviewer.clone();
     motion_ctl.connect_motion(move |ctl,x,y| {
-        //println!("motion@{}x{}!", x, y);
         let mut dataviewer = dataviewer.borrow_mut();
         if dataviewer.mouse_is_pressed() {
             dataviewer.mouse_moved(x, y);
             ctl.widget().queue_draw();
         }
     });
-    //motion_ctl.connect_leave(move |_| {
-    //    println!("leave!");
-    //});
     draw_area.add_controller(motion_ctl);
+
+    // Notify DataViewer when mouse is scrolling
+    let scroll_ctl = gtk::EventControllerScroll::new(
+        gtk::EventControllerScrollFlags::VERTICAL);
+    let dataviewer = g_dataviewer.clone();
+    scroll_ctl.connect_scroll(move |ctl,_,dy| {
+        let mut dataviewer = dataviewer.borrow_mut();
+        dataviewer.mouse_scroll(dy);
+        ctl.widget().queue_draw();
+        gtk::glib::signal::Propagation::Proceed
+    });
+    draw_area.add_controller(scroll_ctl);
 
 
 

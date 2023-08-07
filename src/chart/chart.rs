@@ -1,5 +1,3 @@
-use std::io::BufReader;
-use std::fs::File;
 use crate::canvas::Canvas;
 use crate::dataview;
 
@@ -34,7 +32,7 @@ impl Range {
 }
 
 pub trait Chart {
-    fn range(&self, file: &dataview::File) -> Range {
+    fn range(&self, _file: &dataview::File) -> Range {
         Range {
             x_min: 0.0,
             x_max: 0.0,

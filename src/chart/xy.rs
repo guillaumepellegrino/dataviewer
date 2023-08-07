@@ -1,7 +1,3 @@
-use std::io::BufReader;
-use std::io::BufRead;
-use std::fs::File;
-use eyre::{eyre, Result};
 use crate::chart::chart::{Range, Chart};
 use crate::canvas::Canvas;
 use crate::dataview;

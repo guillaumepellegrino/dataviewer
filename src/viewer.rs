@@ -1,9 +1,6 @@
 use gtk4 as gtk;
 use gtk::cairo;
 use std::path::PathBuf;
-use std::fs::File;
-use std::io::BufReader;
-use std::io::prelude::*;
 use crate::canvas::Canvas;
 use crate::chart::chart::{Range, Chart};
 use crate::chart::*;
@@ -42,7 +39,7 @@ impl DataViewer {
 
         self.file = toml::from_str(&string)?;
         //println!("file: {:?}", file);
-        let mut chart = match self.file.dataview.r#type {
+        let chart = match self.file.dataview.r#type {
             dataview::Type::xy => Box::new(xy::XY::default()),
             r#type => {return Err(eyre!("Unimplemented format '{:?}'", r#type));},
         };
@@ -101,6 +98,24 @@ impl DataViewer {
 
     pub fn mouse_is_pressed(&self) -> bool {
         self.mouse_is_pressed
+    }
+
+    pub fn mouse_scroll(&mut self, dy: f64) {
+        println!("OLD Range: {:?}", self.range);
+        let range_x = self.range.x_max - self.range.x_min;
+        let range_y = self.range.y_max - self.range.y_min;
+
+        let (zoom_x, zoom_y) = match dy > 0.0 {
+            true  => (range_x * 0.10, range_y * 0.10),
+            false => (-range_x * 0.10, -range_y * 0.10),
+        };
+
+        self.range.x_min -= zoom_x;
+        self.range.x_max += zoom_x;
+
+        self.range.y_min -= zoom_y;
+        self.range.y_max += zoom_y;
+        println!("NEW Range: {:?}", self.range);
     }
 }
 
