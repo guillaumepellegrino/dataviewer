@@ -1,7 +1,7 @@
 #!/usr/bin/env dataviewer
 
 [dataview]
-type = "xy"
+type = "XY"
 title = "Speedtest"
 x_title = "Time (s)"
 y_title = "Througtput (Mbps)"

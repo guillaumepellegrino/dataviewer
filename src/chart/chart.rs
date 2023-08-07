@@ -2,14 +2,14 @@ use crate::canvas::Canvas;
 use crate::dataview;
 
 #[derive(Clone, Debug)]
-pub struct Range {
+pub struct View {
     pub x_min: f64,
     pub x_max: f64,
     pub y_min: f64,
     pub y_max: f64,
 }
 
-impl Range {
+impl View {
     pub fn new() -> Self {
         Self {
             x_min: f64::MAX,
@@ -32,8 +32,8 @@ impl Range {
 }
 
 pub trait Chart {
-    fn range(&self, _file: &dataview::File) -> Range {
-        Range {
+    fn view(&self, _file: &dataview::File) -> View {
+        View {
             x_min: 0.0,
             x_max: 0.0,
             y_min: 0.0,

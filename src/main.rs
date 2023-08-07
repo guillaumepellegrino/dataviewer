@@ -7,7 +7,7 @@ use std::path::PathBuf;
 mod canvas;
 mod chart;
 mod dataview;
-mod viewer;
+mod dataviewer;
 
 /*
 extern "C" {
@@ -22,7 +22,7 @@ fn add_events(widget: &impl IsA<gtk::Widget>, events: isize) {
 }
 */
 
-fn new_draw_area_from_dataviewer(g_dataviewer: Rc<RefCell<viewer::DataViewer>>) -> gtk::DrawingArea {
+fn new_draw_area_from_dataviewer(g_dataviewer: Rc<RefCell<dataviewer::DataViewer>>) -> gtk::DrawingArea {
     // Create the Draw Area
     let draw_area = gtk::DrawingArea::new();
     draw_area.set_content_width(128);
@@ -80,7 +80,7 @@ fn new_draw_area_from_dataviewer(g_dataviewer: Rc<RefCell<viewer::DataViewer>>) 
 }
 
 fn dataviewer_from_file(notebook: &gtk::Notebook, path: &PathBuf) {
-    let dataviewer = Rc::new(RefCell::new(viewer::DataViewer::new()));
+    let dataviewer = Rc::new(RefCell::new(dataviewer::DataViewer::new()));
     if let Err(e) = dataviewer.borrow_mut().open(&path) {
         println!("Failed to open {:?}: {:?}", path, e);
     }

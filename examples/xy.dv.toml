@@ -1,7 +1,7 @@
 #!/usr/bin/env dataviewer
 
 [dataview]
-type = "xy"
+type = "XY"
 title = "xSquare"
 x_title = "x"
 y_title = "y"

@@ -6,8 +6,8 @@ use serde::Serialize;
 #[derive(Debug, PartialEq, Default, Copy, Clone, Deserialize, Serialize)]
 pub enum Type {
     #[default]
-    xy,
-    line,
+    XY,
+    Line,
 }
 
 #[derive(Debug, PartialEq, Default, Clone, Deserialize, Serialize)]

@@ -1,21 +1,21 @@
 use gtk4 as gtk;
 use gtk::cairo;
-use crate::chart::chart::Range;
+use crate::chart::chart::View;
 
 pub struct Canvas<'a> {
     cairo: &'a cairo::Context,
     width: f64,
     height: f64,
-    range: Range,
+    view: View,
 }
 
 impl<'a> Canvas<'a> {
-    pub fn new(_area: &'a gtk::DrawingArea, cairo: &'a cairo::Context, width: i32, height: i32, range: &Range) -> Self {
+    pub fn new(_area: &'a gtk::DrawingArea, cairo: &'a cairo::Context, width: i32, height: i32, view: &View) -> Self {
         Self {
             cairo,
             width: width as f64,
             height: height as f64,
-            range: range.clone(),
+            view: view.clone(),
         }
     }
 
@@ -29,14 +29,14 @@ impl<'a> Canvas<'a> {
         //
         // x_norm = (x - x_min) / (x_max - x_min)
         // x_pixel = x_norm * width
-        let x_range = self.range.x_max - self.range.x_min;
-        let x_norm = (x - self.range.x_min) / x_range;
+        let x_view = self.view.x_max - self.view.x_min;
+        let x_norm = (x - self.view.x_min) / x_view;
         x_norm * self.width
     }
 
     fn y_pixel(&self, y: f64) -> f64 {
-        let y_range = self.range.y_max - self.range.y_min;
-        let y_norm = (y - self.range.y_min) / y_range;
+        let y_view = self.view.y_max - self.view.y_min;
+        let y_norm = (y - self.view.y_min) / y_view;
         self.height - y_norm * self.height
     }
 

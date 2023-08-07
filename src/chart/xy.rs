@@ -1,4 +1,4 @@
-use crate::chart::chart::{Range, Chart};
+use crate::chart::chart::{View, Chart};
 use crate::canvas::Canvas;
 use crate::dataview;
 
@@ -27,28 +27,28 @@ impl Chart for XY {
     }
     */
 
-    fn range(&self, file: &dataview::File) -> Range {
-        let mut range = Range::new();
+    fn view(&self, file: &dataview::File) -> View {
+        let mut view = View::new();
 
         for (_, data) in &file.data {
             let iter = data.pair_iter();
             for (x, y) in iter {
-                if x < range.x_min {
-                    range.x_min = x;
+                if x < view.x_min {
+                    view.x_min = x;
                 }
-                if x > range.x_max {
-                    range.x_max = x;
+                if x > view.x_max {
+                    view.x_max = x;
                 }
-                if y < range.y_min {
-                    range.y_min = y;
+                if y < view.y_min {
+                    view.y_min = y;
                 }
-                if y > range.y_max {
-                    range.y_max = y;
+                if y > view.y_max {
+                    view.y_max = y;
                 }
             }
         }
 
-        range
+        view
     }
 
     fn draw(&self, canvas: &Canvas, file: &dataview::File) {

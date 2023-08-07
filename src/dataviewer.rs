@@ -2,7 +2,7 @@ use gtk4 as gtk;
 use gtk::cairo;
 use std::path::PathBuf;
 use crate::canvas::Canvas;
-use crate::chart::chart::{Range, Chart};
+use crate::chart::chart::{View, Chart};
 use crate::chart::*;
 use crate::dataview;
 use eyre::{eyre, Result};
@@ -10,7 +10,7 @@ use eyre::{eyre, Result};
 pub struct DataViewer {
     file: dataview::File,
     chart: Option<Box<dyn chart::Chart>>,
-    range: Range,
+    view: View,
     width: f64,
     height: f64,
     mouse_is_pressed: bool,
@@ -24,7 +24,7 @@ impl DataViewer {
         Self {
             file: dataview::File::default(),
             chart: None,
-            range: Range::new(),
+            view: View::new(),
             width: 1.0,
             height: 1.0,
             mouse_is_pressed: false,
@@ -40,10 +40,10 @@ impl DataViewer {
         self.file = toml::from_str(&string)?;
         //println!("file: {:?}", file);
         let chart = match self.file.dataview.r#type {
-            dataview::Type::xy => Box::new(xy::XY::default()),
+            dataview::Type::XY => Box::new(xy::XY::default()),
             r#type => {return Err(eyre!("Unimplemented format '{:?}'", r#type));},
         };
-        self.range = chart.range(&self.file).margin();
+        self.view = chart.view(&self.file).margin();
         self.chart = Some(chart);
         Ok(())
     }
@@ -55,21 +55,21 @@ impl DataViewer {
             Some(chart) => chart,
             None => {return;},
         };
-        let canvas = Canvas::new(area, cairo, width, height, &self.range);
+        let canvas = Canvas::new(area, cairo, width, height, &self.view);
         chart.draw(&canvas, &self.file);
         canvas.draw();
     }
 
     fn move_canvas(&mut self, dx: f64, dy: f64) {
-        let range_x = self.range.x_max - self.range.x_min;
-        let dx = (dx * range_x) / self.width;
-        self.range.x_min -= dx;
-        self.range.x_max -= dx;
+        let view_x = self.view.x_max - self.view.x_min;
+        let dx = (dx * view_x) / self.width;
+        self.view.x_min -= dx;
+        self.view.x_max -= dx;
 
-        let range_y = self.range.y_max - self.range.y_min;
-        let dy = (dy * range_y) / self.height;
-        self.range.y_min += dy;
-        self.range.y_max += dy;
+        let view_y = self.view.y_max - self.view.y_min;
+        let dy = (dy * view_y) / self.height;
+        self.view.y_min += dy;
+        self.view.y_max += dy;
     }
 
     pub fn mouse_clicked(&mut self, x: f64, y: f64) {
@@ -100,21 +100,21 @@ impl DataViewer {
     }
 
     pub fn mouse_scroll(&mut self, dy: f64) {
-        println!("OLD Range: {:?}", self.range);
-        let range_x = self.range.x_max - self.range.x_min;
-        let range_y = self.range.y_max - self.range.y_min;
+        println!("OLD View: {:?}", self.view);
+        let view_x = self.view.x_max - self.view.x_min;
+        let view_y = self.view.y_max - self.view.y_min;
 
         let (zoom_x, zoom_y) = match dy > 0.0 {
-            true  => (range_x * 0.10, range_y * 0.10),
-            false => (-range_x * 0.10, -range_y * 0.10),
+            true  => (view_x * 0.10, view_y * 0.10),
+            false => (-view_x * 0.10, -view_y * 0.10),
         };
 
-        self.range.x_min -= zoom_x;
-        self.range.x_max += zoom_x;
+        self.view.x_min -= zoom_x;
+        self.view.x_max += zoom_x;
 
-        self.range.y_min -= zoom_y;
-        self.range.y_max += zoom_y;
-        println!("NEW Range: {:?}", self.range);
+        self.view.y_min -= zoom_y;
+        self.view.y_max += zoom_y;
+        println!("NEW View: {:?}", self.view);
     }
 }
 
