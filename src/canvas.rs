@@ -7,15 +7,26 @@ pub struct Canvas<'a> {
     cairo: &'a cairo::Context,
     width: f64,
     height: f64,
+    mouse_x: f64,
+    mouse_y: f64,
     view: View,
 }
 
+pub struct Tooltip {
+    pub key: String,
+    pub xpixel: f64,
+    pub ypixel: f64,
+    pub x: f64,
+    pub y: f64,
+}
+
 impl<'a> Canvas<'a> {
-    pub fn new(_area: &'a gtk::DrawingArea, cairo: &'a cairo::Context, width: i32, height: i32, view: &View) -> Self {
+    pub fn new(_area: &'a gtk::DrawingArea, cairo: &'a cairo::Context, width: i32, height: i32, mouse_x: f64, mouse_y: f64, view: &View) -> Self {
         Self {
             cairo,
             width: width as f64,
             height: height as f64,
+            mouse_x, mouse_y,
             view: view.clone(),
         }
     }
@@ -53,9 +64,11 @@ impl<'a> Canvas<'a> {
         self
     }
 
-    pub fn line_to(&self, x: f64, y: f64) -> &Self {
-        self.cairo.line_to(self.x_pixel(x), self.y_pixel(y));
-        self
+    pub fn line_to(&self, x: f64, y: f64) -> (f64, f64) {
+        let x = self.x_pixel(x);
+        let y = self.y_pixel(y);
+        self.cairo.line_to(x, y);
+        (x, y)
     }
 
     /// Try to format float to a nice viewable string for user.
@@ -177,20 +190,23 @@ impl<'a> Canvas<'a> {
 
     /// Draw x title axis at the bottom right of the canvas
     fn draw_x_title(&self, file: &dataview::File) -> &Self {
-        let title = match &file.dataview.x_title {
-            Some(title) => title,
-            None => {return self;},
+        let mut text = String::new();
+        if let Some(title) = &file.dataview.x_title {
+            text += title;
+        };
+        if let Some(unit) = &file.dataview.x_unit {
+            text += &format!(" ({})", unit);
         };
 
         let fontsize = 12.0;
         self.cairo.set_source_rgb(0.0, 0.0, 0.0);
         self.cairo.set_font_size(fontsize);
 
-        let len = (title.len() as f64) * fontsize;
+        let len = (text.len() as f64) * fontsize;
         let x = self.width - len;
         self.cairo.move_to(x, self.x_axis_pos() + 21.0);
 
-        let _ = self.cairo.show_text(&title);
+        let _ = self.cairo.show_text(&text);
 
         self.cairo.stroke()
             .expect("Cairo stroke failed");
@@ -199,9 +215,12 @@ impl<'a> Canvas<'a> {
 
     /// Draw y tile axis at the top left of the canvas
     fn draw_y_title(&self, file: &dataview::File) -> &Self {
-        let title = match &file.dataview.y_title {
-            Some(title) => title,
-            None => {return self;},
+        let mut text = String::new();
+        if let Some(title) = &file.dataview.y_title {
+            text += title;
+        };
+        if let Some(unit) = &file.dataview.y_unit {
+            text += &format!(" ({})", unit);
         };
 
         let fontsize = 12.0;
@@ -209,10 +228,79 @@ impl<'a> Canvas<'a> {
         self.cairo.set_font_size(fontsize);
         self.cairo.move_to(self.y_axis_pos()+2.0, 45.0);
 
-        let _ = self.cairo.show_text(&title);
+        let _ = self.cairo.show_text(&text);
 
         self.cairo.stroke()
             .expect("Cairo stroke failed");
+        self
+    }
+
+    pub fn draw_multiline_text(&self, text: &str, mut xpixel: f64, mut ypixel: f64, fontsize: f64) -> &Self {
+        self.cairo.set_source_rgb(0.0, 0.0, 0.0);
+        self.cairo.set_font_size(fontsize);
+        let iter = text.split("\n");
+
+        xpixel += 15.0;
+        ypixel += 15.0;
+        for line in iter {
+            self.cairo.move_to(xpixel, ypixel);
+            let _ = self.cairo.show_text(line);
+            ypixel += fontsize;
+        }
+        self
+    }
+
+    pub fn draw_tooltip(&self, file: &dataview::File, tooltip: &Tooltip) -> &Self {
+        println!("Draw tooltip");
+        let fontsize = 12.0;
+        let xpixel = tooltip.xpixel;
+        let ypixel = tooltip.ypixel;
+        self.cairo.move_to(xpixel, ypixel);
+        self.cairo.arc(xpixel, ypixel, 5.0, 0.0, 2.0 * 3.1415);
+
+
+        let mut text = String::new();
+        /*
+        if let Some(description) = &file.dataview.description {
+            text += description;
+            text += "\n";
+        }
+        */
+        if let Some(chart) = &file.chart.get(&tooltip.key) {
+            if let Some(title) = &chart.title {
+                text += "[";
+                text += title;
+                text += "]\n";
+            }
+            if let Some(description) = &chart.description {
+                text += description;
+                text += "\n";
+            }
+        }
+
+        let x_title = match &file.dataview.x_title {
+            Some(x_title) => x_title,
+            None => "x",
+        };
+        let x_unit = match &file.dataview.x_unit {
+            Some(x_unit) => x_unit,
+            None => "",
+        };
+        text += &format!("{}: {} {}\n",
+            x_title, tooltip.x, x_unit);
+
+        let y_title = match &file.dataview.y_title {
+            Some(y_title) => y_title,
+            None => "x",
+        };
+        let y_unit = match &file.dataview.y_unit {
+            Some(y_unit) => y_unit,
+            None => "",
+        };
+        text += &format!("{}: {} {}\n",
+            y_title, tooltip.y, y_unit);
+        self.draw_multiline_text(&text, xpixel, ypixel, fontsize);
+
         self
     }
 
@@ -225,5 +313,13 @@ impl<'a> Canvas<'a> {
             .draw_x_title(file)
             .draw_y_title(file);
         self
+    }
+
+    pub fn mouse_x(&self) -> f64 {
+        self.mouse_x
+    }
+
+    pub fn mouse_y(&self) -> f64 {
+        self.mouse_y
     }
 }

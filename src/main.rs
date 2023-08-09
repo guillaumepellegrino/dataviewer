@@ -54,9 +54,20 @@ fn new_draw_area_from_dataviewer(g_dataviewer: Rc<RefCell<dataviewer::DataViewer
     let motion_ctl = gtk::EventControllerMotion::new();
     let dataviewer = g_dataviewer.clone();
     motion_ctl.connect_motion(move |ctl,x,y| {
+        let dataviewer2 = dataviewer.clone();
+        let ctl2 = ctl.clone();
         let mut dataviewer = dataviewer.borrow_mut();
+        let timer = gtk::glib::source::timeout_add_local_once(
+            std::time::Duration::from_millis(50), move ||
+        {
+            println!("redraw!");
+            let mut dataviewer = dataviewer2.borrow_mut();
+            dataviewer.set_redraw_timer(None);
+            ctl2.widget().queue_draw();
+        });
+        dataviewer.set_redraw_timer(Some(timer));
+        dataviewer.mouse_moved(x, y);
         if dataviewer.mouse_is_pressed() {
-            dataviewer.mouse_moved(x, y);
             ctl.widget().queue_draw();
         }
     });

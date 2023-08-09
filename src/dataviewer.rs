@@ -1,5 +1,6 @@
 use gtk4 as gtk;
 use gtk::cairo;
+use gtk::glib::source;
 use std::path::PathBuf;
 use crate::canvas::Canvas;
 use crate::chart::chart::{View, Chart};
@@ -16,6 +17,7 @@ pub struct DataViewer {
     mouse_is_pressed: bool,
     mouse_xref: f64,
     mouse_yref: f64,
+    redraw_timer: Option<source::SourceId>,
 }
 
 
@@ -30,6 +32,7 @@ impl DataViewer {
             mouse_is_pressed: false,
             mouse_xref: 0.0,
             mouse_yref: 0.0,
+            redraw_timer: None,
         }
     }
 
@@ -55,7 +58,7 @@ impl DataViewer {
             Some(chart) => chart,
             None => {return;},
         };
-        let canvas = Canvas::new(area, cairo, width, height, &self.view);
+        let canvas = Canvas::new(area, cairo, width, height, self.mouse_xref, self.mouse_yref, &self.view);
         chart.draw(&canvas, &self.file);
         canvas.draw(&self.file);
     }
@@ -78,15 +81,20 @@ impl DataViewer {
         self.mouse_yref = y;
     }
 
-    pub fn mouse_moved(&mut self, x: f64, y: f64) {
-        if !self.mouse_is_pressed {
-            return;
+    pub fn set_redraw_timer(&mut self, timer: Option<source::SourceId>) {
+        // Reset the current redraw timer and set the new one.
+        if let Some(timer) = self.redraw_timer.take() {
+            timer.remove();
         }
+        self.redraw_timer = timer;
+    }
 
-        let dx = x - self.mouse_xref;
-        let dy = y - self.mouse_yref;
-        self.move_canvas(dx, dy);
-
+    pub fn mouse_moved(&mut self, x: f64, y: f64) {
+        if self.mouse_is_pressed {
+            let dx = x - self.mouse_xref;
+            let dy = y - self.mouse_yref;
+            self.move_canvas(dx, dy);
+        }
         self.mouse_xref = x;
         self.mouse_yref = y;
     }

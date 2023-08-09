@@ -16,6 +16,8 @@ pub struct DataView {
     pub title: Option<String>,
     pub x_title: Option<String>,
     pub y_title: Option<String>,
+    pub x_unit: Option<String>,
+    pub y_unit: Option<String>,
     pub x_min: Option<f64>,
     pub x_max: Option<f64>,
     pub y_min: Option<f64>,

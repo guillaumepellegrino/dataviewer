@@ -3,18 +3,26 @@
 [dataview]
 type = "XY"
 title = "Speedtest"
-x_title = "Time (s)"
-y_title = "Througtput (Mbps)"
+x_title = "Time"
+x_unit = "seconds"
+y_title = "Throughput"
+y_unit = "Mbps"
 description = """
-TCP Speedtest download and upload througtput,
+TCP Speedtest download and upload throughput,
 measured with iperf3
 """
 
 [chart.1]
 title = "Download"
+description = """TCP Speedtest download throughput
+measured with iperf3
+"""
 
 [chart.2]
 title = "Upload"
+description = """TCP Speedtest upload throughput
+measured with iperf3
+"""
 
 [data.1]
 data = [
