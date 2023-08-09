@@ -57,7 +57,7 @@ impl DataViewer {
         };
         let canvas = Canvas::new(area, cairo, width, height, &self.view);
         chart.draw(&canvas, &self.file);
-        canvas.draw();
+        canvas.draw(&self.file);
     }
 
     fn move_canvas(&mut self, dx: f64, dy: f64) {

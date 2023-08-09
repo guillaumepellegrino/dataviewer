@@ -1,6 +1,7 @@
 use gtk4 as gtk;
 use gtk::cairo;
 use crate::chart::chart::View;
+use crate::dataview;
 
 pub struct Canvas<'a> {
     cairo: &'a cairo::Context,
@@ -92,9 +93,33 @@ impl<'a> Canvas<'a> {
         }
     }
 
+    fn x_axis_pos(&self) -> f64 {
+        let margin = 30.0;
+        let mut y0 = self.y_pixel(0.0);
+        if y0 > self.height - margin {
+            y0 = self.height - margin;
+        }
+        else if y0 < margin {
+            y0 = margin;
+        }
+        y0
+    }
+
+    fn y_axis_pos(&self) -> f64 {
+        let margin = 30.0;
+        let mut x0 = self.x_pixel(0.0);
+        if x0 > self.width - margin {
+            x0 = self.width - margin;
+        }
+        else if x0 < 50.0 {
+            x0 = 50.0;
+        }
+        x0
+    }
+
     pub fn draw_axis(&self) -> &Self {
-        let x0 = self.x_pixel(0.0);
-        let y0 = self.y_pixel(0.0);
+        let x0 = self.y_axis_pos();
+        let y0 = self.x_axis_pos();
         let x_range = self.view.x_max - self.view.x_min;
         let y_range = self.view.y_max - self.view.y_min;
 
@@ -129,10 +154,76 @@ impl<'a> Canvas<'a> {
         self
     }
 
-    pub fn draw(&self) -> &Self {
+    /// Draw main title centered at the top of the canvas
+    fn draw_main_title(&self, file: &dataview::File) -> &Self {
+        let title = match &file.dataview.title {
+            Some(title) => title,
+            None => {return self;},
+        };
+
+        let fontsize = 24.0;
+        self.cairo.set_source_rgb(0.0, 0.0, 0.0);
+        self.cairo.set_font_size(fontsize);
+
+        let len = (title.len() as f64) * fontsize;
+        let x = (self.width - len/2.0) / 2.0;
+        self.cairo.move_to(x, fontsize);
+        let _ = self.cairo.show_text(&title);
+
+        self.cairo.stroke()
+            .expect("Cairo stroke failed");
+        self
+    }
+
+    /// Draw x title axis at the bottom right of the canvas
+    fn draw_x_title(&self, file: &dataview::File) -> &Self {
+        let title = match &file.dataview.x_title {
+            Some(title) => title,
+            None => {return self;},
+        };
+
+        let fontsize = 12.0;
+        self.cairo.set_source_rgb(0.0, 0.0, 0.0);
+        self.cairo.set_font_size(fontsize);
+
+        let len = (title.len() as f64) * fontsize;
+        let x = self.width - len;
+        self.cairo.move_to(x, self.x_axis_pos() + 21.0);
+
+        let _ = self.cairo.show_text(&title);
+
+        self.cairo.stroke()
+            .expect("Cairo stroke failed");
+        self
+    }
+
+    /// Draw y tile axis at the top left of the canvas
+    fn draw_y_title(&self, file: &dataview::File) -> &Self {
+        let title = match &file.dataview.y_title {
+            Some(title) => title,
+            None => {return self;},
+        };
+
+        let fontsize = 12.0;
+        self.cairo.set_source_rgb(0.0, 0.0, 0.0);
+        self.cairo.set_font_size(fontsize);
+        self.cairo.move_to(self.y_axis_pos()+2.0, 45.0);
+
+        let _ = self.cairo.show_text(&title);
+
+        self.cairo.stroke()
+            .expect("Cairo stroke failed");
+        self
+    }
+
+    pub fn draw(&self, file: &dataview::File) -> &Self {
         self.cairo.set_source_rgb(0.5, 0.8, 0.8);
         self.cairo.stroke()
             .expect("Cairo stroke failed");
+
+        self.draw_main_title(file)
+            .draw_x_title(file)
+            .draw_y_title(file);
         self
     }
 }

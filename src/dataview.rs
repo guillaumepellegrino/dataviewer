@@ -14,8 +14,8 @@ pub enum Type {
 pub struct DataView {
     pub r#type: Type,
     pub title: Option<String>,
-    pub x_tile: Option<String>,
-    pub y_tile: Option<String>,
+    pub x_title: Option<String>,
+    pub y_title: Option<String>,
     pub x_min: Option<f64>,
     pub x_max: Option<f64>,
     pub y_min: Option<f64>,

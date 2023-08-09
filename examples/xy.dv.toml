@@ -2,15 +2,15 @@
 
 [dataview]
 type = "XY"
-title = "xSquare"
+title = "Suite"
 x_title = "x"
 y_title = "y"
 description = """
-xSquare
+Suite
 """
 
 [chart.1]
-title = "Download"
+title = "Data"
 
 [data.1]
 data = [
@@ -21,5 +21,6 @@ data = [
 4, 8,
 5, 16,
 6, 32,
+7, 64,
 ]
 

@@ -62,10 +62,10 @@ impl View {
         let x_range = self.x_max - self.x_min;
         let y_range = self.y_max - self.y_min;
         Self {
-            x_min: self.x_min - 0.05 * x_range,
-            x_max: self.x_max + 0.05 * x_range,
-            y_min: self.y_min - 0.05 * y_range,
-            y_max: self.y_max + 0.05 * y_range,
+            x_min: self.x_min - 0.07 * x_range,
+            x_max: self.x_max + 0.07 * x_range,
+            y_min: self.y_min - 0.07 * y_range,
+            y_max: self.y_max + 0.07 * y_range,
         }
     }
 }
