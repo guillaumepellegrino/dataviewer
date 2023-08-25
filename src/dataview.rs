@@ -44,8 +44,10 @@ pub struct File {
     pub data: HashMap<String, Data>,
 }
 
-
-
+#[derive(Debug, PartialEq, Default, Clone, Deserialize, Serialize)]
+pub struct Update {
+    pub data: HashMap<String, Data>,
+}
 
 impl Data {
     pub fn pair_iter(&self) -> PairIterator {

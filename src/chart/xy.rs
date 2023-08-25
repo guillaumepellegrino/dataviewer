@@ -20,6 +20,9 @@ impl Chart for XY {
             .margin()
     }
 
+    // TODO: maybe we should compute first the points
+    // in the canvas view.
+    // Then we do the drawing.
     fn draw(&self, canvas: &Canvas, file: &dataview::File) {
         let mut tooltip = None;
         let mut tooltip_distance = 200.0;
@@ -29,9 +32,11 @@ impl Chart for XY {
             let mut iter = data.pair_iter();
             let (x0, y0) = iter.next().unwrap();
             canvas.move_to(x0, y0);
+            canvas.circle(x0, y0, 2.0);
 
             for (x, y) in iter {
                 let (xpixel, ypixel) = canvas.line_to(x, y);
+                canvas.circle(x, y, 2.0);
                 let distance = squaredistance(xpixel, ypixel, canvas.mouse_x(), canvas.mouse_y());
                 if distance < tooltip_distance {
                     tooltip = Some(Tooltip {

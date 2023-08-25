@@ -71,6 +71,13 @@ impl<'a> Canvas<'a> {
         (x, y)
     }
 
+    pub fn circle(&self, x: f64, y: f64, len: f64) -> (f64, f64) {
+        let x = self.x_pixel(x);
+        let y = self.y_pixel(y);
+        self.cairo.arc(x, y, len, 0.0, 2.0 * 3.1415);
+        (x, y)
+    }
+
     /// Try to format float to a nice viewable string for user.
     /// We try to take in account the user view:
     /// - if user zoom in, we add more decimal
