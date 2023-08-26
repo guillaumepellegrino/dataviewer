@@ -39,7 +39,9 @@ pub struct Data {
 /// The root definition of a DataView File
 #[derive(Debug, PartialEq, Default, Clone, Deserialize, Serialize)]
 pub struct File {
+    #[serde(default)]
     pub dataview: DataView,
+    #[serde(default)]
     pub chart: HashMap<String, Chart>,
     #[serde(default)]
     pub data: HashMap<String, Data>,

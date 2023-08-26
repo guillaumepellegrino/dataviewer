@@ -5,8 +5,6 @@ use std::rc::{Rc, Weak};
 use std::cell::RefCell;
 use std::path::PathBuf;
 use std::collections::{HashMap, VecDeque};
-use async_std::os::unix::net::UnixListener;
-use async_std::prelude::*;
 use eyre::{Result};
 
 mod canvas;
@@ -259,7 +257,7 @@ fn server_handle_load_file(window: &mut WindowContext, file: dataview::File) {
     window.new_dataviewer(file).unwrap();
 }
 
-fn server_handle_merge_file(window: &WindowContext, file: dataview::File) {
+fn server_handle_merge_file(_window: &WindowContext, _file: dataview::File) {
     
 }
 
@@ -362,7 +360,7 @@ fn main() -> glib::ExitCode {
     let context = g_context.clone();
     app.connect_activate(move |app| {
         let mut context = context.borrow_mut();
-        let mut window = WindowContext::new(app);
+        let window = WindowContext::new(app);
 
         // Check if there are files to open
         let files = context.files();
