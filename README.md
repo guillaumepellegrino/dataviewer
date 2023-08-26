@@ -1,11 +1,13 @@
 
-# Iron Eye: Watch and view your data.
+# Watch and view your data in real-time.
 
-A data viewer written in RUST allowing to watch data in real-time (interfacing with DBUS) or view them from files.
+This application allow you to watch your data in real-time (using a simple and documented protocol) or view them from files.
 
-The purpose of this crate is to make it easy for a third-party application to display data to an end-user.
+This crate make it easy to display the data from third-party applications.
 
 GTK4 must be installed to build this application:
 ```
 sudo apt install libgtk-4-dev
 ```
+
+
