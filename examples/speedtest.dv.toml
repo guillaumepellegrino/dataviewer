@@ -24,8 +24,8 @@ description = """TCP Speedtest upload throughput
 measured with iperf3
 """
 
-[data.1]
-data = [
+[data]
+1 = [
 1, 731,
 2, 887,
 3, 953,
@@ -37,9 +37,7 @@ data = [
 9, 991,
 10, 990,
 ]
-
-[data.2]
-data = [
+2 = [
 1, 60,
 2, 72,
 3, 95,

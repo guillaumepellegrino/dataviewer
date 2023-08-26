@@ -12,8 +12,8 @@ Suite
 [chart.1]
 title = "Data"
 
-[data.1]
-data = [
+[data]
+1 = [
 0, 0,
 1, 1,
 2, 2,

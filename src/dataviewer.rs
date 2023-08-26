@@ -3,7 +3,6 @@ use gtk::cairo;
 use gtk::prelude::*;
 use gtk::glib::source;
 use std::path::PathBuf;
-use std::collections::HashMap;
 use crate::canvas::Canvas;
 use crate::chart::chart::{View, Chart};
 use crate::chart::*;
@@ -49,9 +48,11 @@ impl DataViewer {
     pub fn load(&mut self, file: dataview::File) -> Result<()> {
         self.file = file;
 
+        println!("load: {:?}", self.file);
+
         for (key, _) in &self.file.chart {
             if self.file.data.get(key) == None {
-                self.file.data.insert(key.clone(), dataview::Data::default());
+                self.file.data.insert(key.clone(), vec!());
             }
         }
 
@@ -65,14 +66,14 @@ impl DataViewer {
         Ok(())
     }
 
-    pub fn update(&mut self, update: HashMap<String, dataview::Data>) {
-        for (key, value) in update {
+    pub fn update(&mut self, update: dataview::File) {
+        for (key, value) in update.data {
             let data = self.file.data.get_mut(&key);
             let data = match data {
                 Some(data) => data,
                 None => {continue;},
             };
-            data.data.extend(value.data);
+            data.extend(value);
         }
         if !self.mouse_is_pressed() {
             self.view = self.chart.as_ref().unwrap().view(&self.file);

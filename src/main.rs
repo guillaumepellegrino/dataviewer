@@ -4,13 +4,14 @@ use gtk::prelude::*;
 use std::rc::{Rc, Weak};
 use std::cell::RefCell;
 use std::path::PathBuf;
-use std::collections::{HashMap, VecDeque};
+use std::collections::{VecDeque};
 use eyre::{Result};
 
 mod canvas;
 mod chart;
 mod dataview;
 mod dataviewer;
+mod utils;
 
 struct AppContext {
     files: Vec<PathBuf>,
@@ -253,15 +254,7 @@ fn new_draw_area_from_dataviewer(g_dataviewer: Rc<RefCell<dataviewer::DataViewer
     draw_area
 }
 
-fn server_handle_load_file(window: &mut WindowContext, file: dataview::File) {
-    window.new_dataviewer(file).unwrap();
-}
-
-fn server_handle_merge_file(_window: &WindowContext, _file: dataview::File) {
-    
-}
-
-fn server_handle_update(window: &WindowContext, update: HashMap<String, dataview::Data>) {
+fn server_handle_update(window: &WindowContext, update: dataview::File) {
     let dataviewer = match window.dataviewers.first() {
         Some(dataviewer) => dataviewer,
         None => {return;},
@@ -274,23 +267,23 @@ fn server_handle_update(window: &WindowContext, update: HashMap<String, dataview
     dataviewer.update(update);
 }
   
-fn server_handle_message(window: &mut WindowContext, message: dataview::Message) {
-     println!("message = {:?}", message);
-     match message {
-        dataview::Message::None => {},
-        dataview::Message::Load(file) => server_handle_load_file(window, file),
-        dataview::Message::Merge(file) => server_handle_merge_file(window, file),
-        dataview::Message::Delete(_) => {},
-        dataview::Message::Update(update) => server_handle_update(window, update),
-    }
+fn server_handle_message(window: &mut WindowContext, file: dataview::File) {
+     println!("message = {:?}", file);
+
+     if !file.chart.is_empty() {
+         window.new_dataviewer(file).unwrap();
+     }
+     else if !file.data.is_empty() {
+         server_handle_update(window, file);
+     }
 }
 
 fn server_new(app: &gtk::Application) {
     let ipc_name = "/tmp/dataviewer.ipc";
     let main_context = glib::MainContext::default();
     let app = app.clone();
+    println!("Listening on ipc://{}", ipc_name);
     main_context.spawn_local(async move {
-        println!("Listening on ipc://{}", ipc_name);
         let path = PathBuf::from(ipc_name);
         let _ = std::fs::remove_file(&path);
         let address = gio::UnixSocketAddress::new(
@@ -318,7 +311,7 @@ fn server_new(app: &gtk::Application) {
                 loop {
                     let buff = stream.read_utf8_upto(0).await;
                     //let update : HashMap<String, dataview::Data> = toml::from_str(&buff).unwrap();
-                    let message : dataview::Message = toml::from_str(&buff).unwrap();
+                    let message : dataview::File = toml::from_str(&buff).unwrap();
                     server_handle_message(&mut window, message);
                 }
             });

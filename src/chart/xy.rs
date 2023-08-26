@@ -1,6 +1,7 @@
 use crate::chart::chart::{View, Chart};
 use crate::canvas::{Canvas, Tooltip};
 use crate::dataview;
+use crate::utils::PairIterator;
 
 // Plot an XY Chart
 #[derive(Default)]
@@ -30,7 +31,7 @@ impl Chart for XY {
         canvas.draw_axis();
 
         for (key, data) in &file.data {
-            let mut iter = data.pair_iter();
+            let mut iter = PairIterator::new(data);
             let (x0, y0) = match iter.next() {
                 Some(v) => v,
                 None => {return;},

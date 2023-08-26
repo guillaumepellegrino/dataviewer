@@ -31,61 +31,15 @@ pub struct Chart {
     pub description: Option<String>,
 }
 
-#[derive(Debug, PartialEq, Default, Clone, Deserialize, Serialize)]
-pub struct Data {
-    pub data: Vec<f64>,
-}
-
 /// The root definition of a DataView File
 #[derive(Debug, PartialEq, Default, Clone, Deserialize, Serialize)]
 pub struct File {
     #[serde(default)]
     pub dataview: DataView,
+
     #[serde(default)]
     pub chart: HashMap<String, Chart>,
+
     #[serde(default)]
-    pub data: HashMap<String, Data>,
-}
-
-#[derive(Debug, PartialEq, Default, Clone, Deserialize, Serialize)]
-pub struct Update {
-    pub data: HashMap<String, Data>,
-}
-
-#[derive(Debug, PartialEq, Default, Clone, Deserialize, Serialize)]
-pub enum Message {
-    #[default]
-    None,
-    Load(File),
-    Merge(File),
-    Delete(String),
-    Update(HashMap<String, Data>),
-}
-
-impl Data {
-    pub fn pair_iter(&self) -> PairIterator {
-        PairIterator {
-            iter: self.data.iter()
-        }
-    }
-}
-
-pub struct PairIterator<'a> {
-    iter: std::slice::Iter<'a, f64>,
-}
-
-impl<'a> Iterator for PairIterator<'a> {
-    type Item = (f64, f64);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let a = match self.iter.next() {
-            Some(a) => a,
-            None => {return None;},
-        };
-        let b = match self.iter.next() {
-            Some(b) => b,
-            None => {return None;},
-        };
-        Some((*a, *b))
-    }
+    pub data: HashMap<String, Vec<f64>>,
 }

@@ -4,7 +4,7 @@
 speedtest_load()
 {
     cat <<EOF
-[Load.dataview]
+[dataview]
 type = "XY"
 title = "Speedtest"
 x_title = "Time"
@@ -16,13 +16,13 @@ TCP Speedtest download and upload throughput,
 measured with iperf3
 """
 
-[Load.chart.1]
+[chart.1]
 title = "Download"
 description = """TCP Speedtest download throughput
 measured with iperf3
 """
 
-[Load.chart.2]
+[chart.2]
 title = "Upload"
 description = """TCP Speedtest upload throughput
 measured with iperf3
@@ -39,9 +39,9 @@ main()
     while true; do
         download=$(((RANDOM % 40) + 800))
         upload=$(((RANDOM % 10) + 80))
-        echo "[Update]"
-        echo "1.data=[$time,$download]"
-        echo "2.data=[$time,$upload]"
+        echo "[data]"
+        echo "1=[$time,$download]"
+        echo "2=[$time,$upload]"
         printf "\0"
         sleep 1
         time=$((time+1))

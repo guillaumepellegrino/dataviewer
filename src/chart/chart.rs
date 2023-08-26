@@ -1,5 +1,6 @@
 use crate::canvas::Canvas;
 use crate::dataview;
+use crate::utils::PairIterator;
 
 #[derive(Clone, Debug)]
 pub struct View {
@@ -22,7 +23,7 @@ impl View {
     pub fn sanity_check(&self, file: &dataview::File) -> Self {
         let mut empty = true;
         for (_, data) in &file.data {
-            if data.data.len() > 2 {
+            if data.len() > 2 {
                 empty = false;
             }
         }
@@ -41,7 +42,7 @@ impl View {
     pub fn xy_minmax(file: &dataview::File) -> Self {
         let mut view = Self::new();
         for (_, data) in &file.data {
-            let iter = data.pair_iter();
+            let iter = PairIterator::new(data);
             for (x, y) in iter {
                 if x < view.x_min {
                     view.x_min = x;
