@@ -19,6 +19,25 @@ impl View {
         }
     }
 
+    pub fn sanity_check(&self, file: &dataview::File) -> Self {
+        let mut empty = true;
+        for (_, data) in &file.data {
+            if data.data.len() > 2 {
+                empty = false;
+            }
+        }
+
+        match empty {
+            true => Self {
+                x_min: -1.0,
+                x_max: 1.0,
+                y_min: -1.0,
+                y_max: 1.0,
+            },
+            false => self.clone(),
+        }
+    }
+
     pub fn xy_minmax(file: &dataview::File) -> Self {
         let mut view = Self::new();
         for (_, data) in &file.data {
@@ -38,6 +57,7 @@ impl View {
                 }
             }
         }
+
         view
     }
 
@@ -71,14 +91,7 @@ impl View {
 }
 
 pub trait Chart {
-    fn view(&self, _file: &dataview::File) -> View {
-        View {
-            x_min: 0.0,
-            x_max: 0.0,
-            y_min: 0.0,
-            y_max: 0.0,
-        }
-    }
+    fn view(&self, _file: &dataview::File) -> View;
 
     // Draw the Chart
     fn draw(&self, canvas: &Canvas, file: &dataview::File);

@@ -1,7 +1,9 @@
 use gtk4 as gtk;
 use gtk::cairo;
+use gtk::prelude::*;
 use gtk::glib::source;
 use std::path::PathBuf;
+use std::collections::HashMap;
 use crate::canvas::Canvas;
 use crate::chart::chart::{View, Chart};
 use crate::chart::*;
@@ -18,6 +20,7 @@ pub struct DataViewer {
     mouse_xref: f64,
     mouse_yref: f64,
     redraw_timer: Option<source::SourceId>,
+    draw_area: Option<gtk::DrawingArea>,
 }
 
 
@@ -33,14 +36,25 @@ impl DataViewer {
             mouse_xref: 0.0,
             mouse_yref: 0.0,
             redraw_timer: None,
+            draw_area: None,
         }
     }
 
     pub fn open(&mut self, path: &PathBuf) -> Result<()> {
-        // Open the File
         let string = std::fs::read_to_string(path)?;
+        let file = toml::from_str(&string)?;
+        self.load(file)
+    }
 
-        self.file = toml::from_str(&string)?;
+    pub fn load(&mut self, file: dataview::File) -> Result<()> {
+        self.file = file;
+
+        for (key, _) in &self.file.chart {
+            if self.file.data.get(key) == None {
+                self.file.data.insert(key.clone(), dataview::Data::default());
+            }
+        }
+
         //println!("file: {:?}", file);
         let chart = match self.file.dataview.r#type {
             dataview::Type::XY => Box::new(xy::XY::default()),
@@ -51,7 +65,23 @@ impl DataViewer {
         Ok(())
     }
 
+    pub fn update(&mut self, update: HashMap<String, dataview::Data>) {
+        for (key, value) in update {
+            let data = self.file.data.get_mut(&key);
+            let data = match data {
+                Some(data) => data,
+                None => {continue;},
+            };
+            data.data.extend(value.data);
+        }
+        if !self.mouse_is_pressed() {
+            self.view = self.chart.as_ref().unwrap().view(&self.file);
+        }
+        self.queue_redraw();
+    }
+
     pub fn draw(&mut self, area: &gtk::DrawingArea, cairo: &cairo::Context, width: i32, height: i32) {
+        self.draw_area = Some(area.clone());
         self.width = width.into();
         self.height = height.into();
         let chart = match &self.chart {
@@ -61,6 +91,12 @@ impl DataViewer {
         let canvas = Canvas::new(area, cairo, width, height, self.mouse_xref, self.mouse_yref, &self.view);
         chart.draw(&canvas, &self.file);
         canvas.draw(&self.file);
+    }
+
+    pub fn queue_redraw(&self) {
+        if let Some(draw_area) = &self.draw_area {
+            draw_area.queue_draw();
+        }
     }
 
     fn move_canvas(&mut self, dx: f64, dy: f64) {

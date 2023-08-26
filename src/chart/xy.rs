@@ -16,6 +16,7 @@ fn squaredistance(x1: f64, y1: f64, x2: f64, y2: f64) -> f64 {
 impl Chart for XY {
     fn view(&self, file: &dataview::File) -> View {
         View::xy_minmax(file)
+            .sanity_check(file)
             .show_axis()
             .margin()
     }
@@ -30,7 +31,10 @@ impl Chart for XY {
 
         for (key, data) in &file.data {
             let mut iter = data.pair_iter();
-            let (x0, y0) = iter.next().unwrap();
+            let (x0, y0) = match iter.next() {
+                Some(v) => v,
+                None => {return;},
+            };
             canvas.move_to(x0, y0);
             canvas.circle(x0, y0, 2.0);
 

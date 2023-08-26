@@ -41,12 +41,23 @@ pub struct Data {
 pub struct File {
     pub dataview: DataView,
     pub chart: HashMap<String, Chart>,
+    #[serde(default)]
     pub data: HashMap<String, Data>,
 }
 
 #[derive(Debug, PartialEq, Default, Clone, Deserialize, Serialize)]
 pub struct Update {
     pub data: HashMap<String, Data>,
+}
+
+#[derive(Debug, PartialEq, Default, Clone, Deserialize, Serialize)]
+pub enum Message {
+    #[default]
+    None,
+    Load(File),
+    Merge(File),
+    Delete(String),
+    Update(HashMap<String, Data>),
 }
 
 impl Data {

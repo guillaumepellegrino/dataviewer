@@ -1,11 +1,13 @@
 use gtk4 as gtk;
+use gtk::{glib, gio};
 use gtk::prelude::*;
-use std::rc::Rc;
+use std::rc::{Rc, Weak};
 use std::cell::RefCell;
 use std::path::PathBuf;
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use async_std::os::unix::net::UnixListener;
 use async_std::prelude::*;
+use eyre::{Result};
 
 mod canvas;
 mod chart;
@@ -14,6 +16,12 @@ mod dataviewer;
 
 struct AppContext {
     files: Vec<PathBuf>,
+}
+
+struct WindowContext {
+    _window: gtk::ApplicationWindow,
+    notebook: gtk::Notebook,
+    dataviewers: Vec<Weak<RefCell<dataviewer::DataViewer>>>,
 }
 
 impl AppContext {
@@ -25,6 +33,157 @@ impl AppContext {
 
     pub fn files(&mut self) -> &mut Vec<PathBuf> {
         &mut self.files
+    }
+}
+
+impl WindowContext {
+    pub fn new(app: &gtk::Application) -> Self {
+        println!("New window !");
+        // Create a new window (the user may open multiple windows)
+        let window = gtk::ApplicationWindow::builder()
+            .application(app)
+            .default_width(900)
+            .default_height(600)
+            .title("Data Viewer")
+            .build();
+        // Create the title bar
+        let titlebar = gtk::HeaderBar::new();
+        // Create the notebook (tabs manager)
+        let notebook = gtk::Notebook::new();
+        window.set_child(Some(&notebook));
+
+        let context = Self {
+            _window: window.clone(),
+            notebook: notebook.clone(),
+            dataviewers: vec!(),
+        };
+
+        // Create the Open File button and Dialog
+        let buttons = [("Open", gtk::ResponseType::Ok)];
+        let openfile = gtk::FileChooserDialog::new(
+            Some("Open file to view"),
+            Some(&window),
+            gtk::FileChooserAction::Open,
+            &buttons,
+            );
+        openfile.connect_response(move |file, response| {
+            file.hide();
+            if response != gtk::ResponseType::Ok {
+                return;
+            }
+            let filename = match file.file() {
+                Some(filename) => filename,
+                None => {return;},
+            };
+            let filename = match filename.path() {
+                Some(filename) => filename,
+                None => {return;},
+            };
+            println!("Opening {:?}", filename);
+            WindowContext::dataviewer_from_file(&notebook, &filename);
+        });
+        let openbutton = gtk::Button::with_label("Open");
+        openbutton.connect_clicked(move |_| {
+            openfile.present();
+
+        });
+        titlebar.pack_start(&openbutton);
+
+        // Create the Save File button and Dialog
+        let button2 = gtk::Button::with_label("Save");
+        button2.connect_clicked(|_| {
+            println!("Save");
+        });
+        titlebar.pack_end(&button2);
+
+        // Create the Export File button and Dialog
+        let button3 = gtk::Button::with_label("Export");
+        button3.connect_clicked(|_| {
+            println!("Export as PNG image");
+        });
+        titlebar.pack_end(&button3);
+
+        window.set_titlebar(Some(&titlebar));
+        window.show();
+        context
+    } 
+
+    // Duplicate functions bellow. need to be fixed
+    pub fn new_dataviewer(&mut self, file: dataview::File) -> Result<Rc<RefCell<dataviewer::DataViewer>>> {
+        let dataviewer = Rc::new(RefCell::new(dataviewer::DataViewer::new()));
+        dataviewer.borrow_mut().load(file)?;
+        let draw_area = new_draw_area_from_dataviewer(dataviewer.clone());
+        let label = gtk::Label::new(Some("Unknown"));
+        self.notebook.append_page(&draw_area, Some(&label));
+        draw_area.queue_draw();
+
+        let weak = Rc::<RefCell<dataviewer::DataViewer>>::downgrade(&dataviewer);
+        self.dataviewers.push(weak);
+
+        Ok(dataviewer)
+    }
+    pub fn new_dataviewer_from_file(&self, path: &PathBuf) {
+        let dataviewer = Rc::new(RefCell::new(dataviewer::DataViewer::new()));
+        if let Err(e) = dataviewer.borrow_mut().open(&path) {
+            println!("Failed to open {:?}: {:?}", path, e);
+        }
+        let draw_area = new_draw_area_from_dataviewer(dataviewer);
+        let filename = path.file_name().unwrap().to_string_lossy();
+        let label = gtk::Label::new(Some(&filename));
+        self.notebook.append_page(&draw_area, Some(&label));
+        draw_area.queue_draw();
+    }
+    pub fn dataviewer_from_file(notebook: &gtk::Notebook, path: &PathBuf) {
+        let dataviewer = Rc::new(RefCell::new(dataviewer::DataViewer::new()));
+        if let Err(e) = dataviewer.borrow_mut().open(&path) {
+            println!("Failed to open {:?}: {:?}", path, e);
+        }
+        let draw_area = new_draw_area_from_dataviewer(dataviewer);
+        let filename = path.file_name().unwrap().to_string_lossy();
+        let label = gtk::Label::new(Some(&filename));
+        notebook.append_page(&draw_area, Some(&label));
+        draw_area.queue_draw();
+    }
+
+}
+
+struct Stream {
+    buffer: std::collections::VecDeque::<u8>,
+    input: gio::InputStream,
+}
+
+impl Stream {
+    fn new(iostream: &gio::SocketConnection) -> Self {
+        Self {
+            buffer: VecDeque::new(),
+            input: iostream.input_stream(),
+        }
+    }
+
+    async fn read_utf8_upto(&mut self, upto: u8) -> String {
+        let mut string = String::new();
+        loop {
+            while let Some(c) = self.buffer.pop_front() {
+                if c == upto {
+                    return string;
+                }
+                if c.is_ascii() {
+                    string.push(c as char);
+                }
+            }
+
+            let mut buffer = Vec::<u8>::with_capacity(4096);
+            buffer.resize(4096, 0);
+            let (mut buffer, size) = self.input.read_future(buffer, glib::source::Priority::DEFAULT)
+                .await.unwrap();
+
+            buffer.truncate(size);
+            self.buffer.extend(buffer);
+
+            if size == 0 {
+                panic!("end of file");
+            }
+        }
     }
 }
 
@@ -63,7 +222,7 @@ fn new_draw_area_from_dataviewer(g_dataviewer: Rc<RefCell<dataviewer::DataViewer
         let dataviewer2 = dataviewer.clone();
         let ctl2 = ctl.clone();
         let mut dataviewer = dataviewer.borrow_mut();
-        let timer = gtk::glib::source::timeout_add_local_once(
+        let timer = glib::source::timeout_add_local_once(
             std::time::Duration::from_millis(50), move ||
         {
             println!("redraw!");
@@ -87,7 +246,7 @@ fn new_draw_area_from_dataviewer(g_dataviewer: Rc<RefCell<dataviewer::DataViewer
         let mut dataviewer = dataviewer.borrow_mut();
         dataviewer.mouse_scroll(dy);
         ctl.widget().queue_draw();
-        gtk::glib::signal::Propagation::Proceed
+        glib::signal::Propagation::Proceed
     });
     draw_area.add_controller(scroll_ctl);
 
@@ -96,124 +255,82 @@ fn new_draw_area_from_dataviewer(g_dataviewer: Rc<RefCell<dataviewer::DataViewer
     draw_area
 }
 
-fn dataviewer_from_file(notebook: &gtk::Notebook, path: &PathBuf) {
-    let dataviewer = Rc::new(RefCell::new(dataviewer::DataViewer::new()));
-    if let Err(e) = dataviewer.borrow_mut().open(&path) {
-        println!("Failed to open {:?}: {:?}", path, e);
-    }
-    let draw_area = new_draw_area_from_dataviewer(dataviewer);
-    let filename = path.file_name().unwrap().to_string_lossy();
-    let label = gtk::Label::new(Some(&filename));
-    notebook.append_page(&draw_area, Some(&label));
-    draw_area.queue_draw();
+fn server_handle_load_file(window: &mut WindowContext, file: dataview::File) {
+    window.new_dataviewer(file).unwrap();
 }
 
-fn window_new(app: &gtk::Application, files: &mut Vec<PathBuf>) {
-    println!("New window !");
-    // Create a new window (the user may open multiple windows)
-    let window = gtk::ApplicationWindow::builder()
-        .application(app)
-        .default_width(900)
-        .default_height(600)
-        .title("Data Viewer")
-        .build();
-    // Create the title bar
-    let titlebar = gtk::HeaderBar::new();
-    // Create the notebook (tabs manager)
-    let notebook = gtk::Notebook::new();
-    window.set_child(Some(&notebook));
-
-    // Check if there are files to open
-    for file in files.iter().skip(1) {
-        dataviewer_from_file(&notebook, &file);
-    }
-    files.clear();
-
-    // Create the Open File button and Dialog
-    let buttons = [("Open", gtk::ResponseType::Ok)];
-    let openfile = gtk::FileChooserDialog::new(
-        Some("Open file to view"),
-        Some(&window),
-        gtk::FileChooserAction::Open,
-        &buttons,
-    );
-    openfile.connect_response(move |file, response| {
-        file.hide();
-        if response != gtk::ResponseType::Ok {
-            return;
-        }
-        let filename = match file.file() {
-            Some(filename) => filename,
-            None => {return;},
-        };
-        let filename = match filename.path() {
-            Some(filename) => filename,
-            None => {return;},
-        };
-        println!("Opening {:?}", filename);
-        dataviewer_from_file(&notebook, &filename);
-
-    });
-    let openbutton = gtk::Button::with_label("Open");
-    openbutton.connect_clicked(move |_| {
-        openfile.present();
-
-    });
-    titlebar.pack_start(&openbutton);
-
-    // Create the Save File button and Dialog
-    let button2 = gtk::Button::with_label("Save");
-    button2.connect_clicked(|_| {
-        println!("Save");
-    });
-    titlebar.pack_end(&button2);
-
-    // Create the Export File button and Dialog
-    let button3 = gtk::Button::with_label("Export");
-    button3.connect_clicked(|_| {
-        println!("Export as PNG image");
-    });
-    titlebar.pack_end(&button3);
-
-    window.set_titlebar(Some(&titlebar));
-    window.show();
+fn server_handle_merge_file(window: &WindowContext, file: dataview::File) {
+    
 }
 
-fn server_new(_app: &gtk::Application) {
-    let ipc_path = "/tmp/dataviewer.ipc";
-    println!("Start ipc listening socket on {}", ipc_path);
-    async_std::task::spawn(async move {
-        // Let's build a webserver, here.
-        // So, than user can push its data with a simple 'curl'
-        let path = PathBuf::from(ipc_path);
+fn server_handle_update(window: &WindowContext, update: HashMap<String, dataview::Data>) {
+    let dataviewer = match window.dataviewers.first() {
+        Some(dataviewer) => dataviewer,
+        None => {return;},
+    };
+    let dataviewer = match dataviewer.upgrade() {
+        Some(dataviewer) => dataviewer,
+        None => {return;},
+    };
+    let mut dataviewer = dataviewer.borrow_mut();
+    dataviewer.update(update);
+}
+  
+fn server_handle_message(window: &mut WindowContext, message: dataview::Message) {
+     println!("message = {:?}", message);
+     match message {
+        dataview::Message::None => {},
+        dataview::Message::Load(file) => server_handle_load_file(window, file),
+        dataview::Message::Merge(file) => server_handle_merge_file(window, file),
+        dataview::Message::Delete(_) => {},
+        dataview::Message::Update(update) => server_handle_update(window, update),
+    }
+}
+
+fn server_new(app: &gtk::Application) {
+    let ipc_name = "/tmp/dataviewer.ipc";
+    let main_context = glib::MainContext::default();
+    let app = app.clone();
+    main_context.spawn_local(async move {
+        println!("Listening on ipc://{}", ipc_name);
+        let path = PathBuf::from(ipc_name);
         let _ = std::fs::remove_file(&path);
-        let listener = UnixListener::bind(&path).await.unwrap();
+        let address = gio::UnixSocketAddress::new(
+            &PathBuf::from(&path));
+        let server = gio::Socket::new(
+            gio::SocketFamily::Unix,
+            gio::SocketType::Stream,
+            gio::SocketProtocol::Default).unwrap();
+        server.bind(&address, true).unwrap();
+        server.listen().unwrap();
+
+        let listener = gio::SocketListener::new();
+        listener.add_socket(&server, None as Option<&glib::Object>).unwrap();
+
         loop {
-            let (socket, _addr) = listener.accept().await.unwrap();
-            async_std::task::spawn(async {
-                let reader = async_std::io::BufReader::new(socket);
-                let mut split = reader.split(b'\0');
+            let (client,_) = listener.accept_future().await.unwrap();
+            println!("New ipc client connected: Opening a new Window");
 
-                // Read dataview::File from ipc socket
+            // Read dataview::File from ipc socket
+            let mut window = WindowContext::new(&app);
 
-                while let Some(buff) = split.next().await {
-                    let buff = buff.unwrap();
-                    let s = std::str::from_utf8(&buff).unwrap();
-                    // printf "1.data=[1,2]\n2.data=[4,5]\0" | nc -U /tmp/dataviewer.ipc
-                    //
-                    let update : HashMap<String, dataview::Data> = toml::from_str(&s).unwrap();
-                    println!("update = {:?}", update);
+            let main_context = glib::MainContext::default();
+            main_context.spawn_local(async move {
+                let mut stream = Stream::new(&client);
+                loop {
+                    let buff = stream.read_utf8_upto(0).await;
+                    //let update : HashMap<String, dataview::Data> = toml::from_str(&buff).unwrap();
+                    let message : dataview::Message = toml::from_str(&buff).unwrap();
+                    server_handle_message(&mut window, message);
                 }
             });
         }
     });
 }
 
-
-
-fn main() -> gtk::glib::ExitCode {
-    let mut flags = gtk::gio::ApplicationFlags::empty();
-    flags.insert(gtk::gio::ApplicationFlags::HANDLES_COMMAND_LINE);
+fn main() -> glib::ExitCode {
+    let mut flags = gio::ApplicationFlags::empty();
+    flags.insert(gio::ApplicationFlags::HANDLES_COMMAND_LINE);
 
     let app = gtk::Application::builder()
         .application_id("org.gtk.dataviewer")
@@ -245,7 +362,14 @@ fn main() -> gtk::glib::ExitCode {
     let context = g_context.clone();
     app.connect_activate(move |app| {
         let mut context = context.borrow_mut();
-        window_new(app, context.files());
+        let mut window = WindowContext::new(app);
+
+        // Check if there are files to open
+        let files = context.files();
+        for file in files.iter().skip(1) {
+            window.new_dataviewer_from_file(&file);
+        }
+        files.clear();
     });
     app.connect_startup(move |app| {
         server_new(app);
@@ -253,3 +377,4 @@ fn main() -> gtk::glib::ExitCode {
 
     app.run()
 }
+
