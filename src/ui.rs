@@ -18,6 +18,9 @@ pub trait WindowDVExt {
     fn new_draw_area(&self, file: dataview::File, label: &str) -> Result<gtk::DrawingArea>;
     fn new_draw_area_from_file(&self, path: &PathBuf) -> Result<gtk::DrawingArea>;
     fn get_notebook(&self) -> gtk::Notebook;
+    fn new_open_button(&self) -> gtk::Button;
+    fn new_save_button(&self) -> gtk::Button;
+    fn new_export_button(&self) -> gtk::Button;
 }
 
 /// Extend DataViewer Notebook (tabs) with some utils functions
@@ -41,59 +44,23 @@ impl ApplicationDVExt for gtk::Application {
             .default_width(900)
             .default_height(600)
             .title("Data Viewer")
-            .build();
+            .build()
+            .upcast::<gtk::Window>();
+
         // Create the title bar
         let titlebar = gtk::HeaderBar::new();
         // Create the notebook (tabs manager)
         let notebook = gtk::Notebook::new();
         window.set_child(Some(&notebook));
 
-        // Create the Open File button and Dialog
-        let buttons = [("Open", gtk::ResponseType::Ok)];
-        let openfile = gtk::FileChooserDialog::new(
-            Some("Open file to view"),
-            Some(&window),
-            gtk::FileChooserAction::Open,
-            &buttons,
-            );
+        titlebar.pack_start(
+            &window.new_open_button());
 
-        let windowref = window.clone().upcast::<gtk::Window>();
-        openfile.connect_response(move |file, response| {
-            file.hide();
-            if response != gtk::ResponseType::Ok {
-                return;
-            }
-            let filename = match file.file() {
-                Some(filename) => filename,
-                None => {return;},
-            };
-            let filename = match filename.path() {
-                Some(filename) => filename,
-                None => {return;},
-            };
-            println!("Opening {:?}", filename);
-            let _ = windowref.new_draw_area_from_file(&filename);
-        });
-        let openbutton = gtk::Button::with_label("Open");
-        openbutton.connect_clicked(move |_| {
-            openfile.present();
+        titlebar.pack_end(
+            &window.new_save_button());
 
-        });
-        titlebar.pack_start(&openbutton);
-
-        // Create the Save File button and Dialog
-        let button2 = gtk::Button::with_label("Save");
-        button2.connect_clicked(|_| {
-            println!("Save");
-        });
-        titlebar.pack_end(&button2);
-
-        // Create the Export File button and Dialog
-        let button3 = gtk::Button::with_label("Export");
-        button3.connect_clicked(|_| {
-            println!("Export as PNG image");
-        });
-        titlebar.pack_end(&button3);
+        titlebar.pack_end(
+            &window.new_export_button());
 
         window.set_titlebar(Some(&titlebar));
         window.show();
@@ -137,6 +104,141 @@ impl WindowDVExt for gtk::Window {
     fn get_notebook(&self) -> gtk::Notebook {
         let widget = self.child().unwrap();
         widget.downcast::<gtk::Notebook>().unwrap()
+    }
+
+    fn new_open_button(&self) -> gtk::Button {
+        // Create the Open File button and Dialog
+        let buttons = [("Open", gtk::ResponseType::Ok)];
+        let dialog = gtk::FileChooserDialog::new(
+            Some("Open file to view"),
+            Some(self),
+            gtk::FileChooserAction::Open,
+            &buttons,
+            );
+
+        let window = self.clone();
+        dialog.connect_response(move |file, response| {
+            file.hide();
+            if response != gtk::ResponseType::Ok {
+                return;
+            }
+            let filename = match file.file() {
+                Some(filename) => filename,
+                None => {return;},
+            };
+            let filename = match filename.path() {
+                Some(filename) => filename,
+                None => {return;},
+            };
+            println!("Opening {:?}", filename);
+            let _ = window.new_draw_area_from_file(&filename);
+        });
+
+        let button = gtk::Button::with_label("Open");
+        button.connect_clicked(move |_| {
+            dialog.present();
+        });
+        button
+    }
+
+    fn new_save_button(&self) -> gtk::Button {
+        // Create the Open File button and Dialog
+        let buttons = [
+            ("Save", gtk::ResponseType::Ok),
+        ];
+        let dialog = gtk::FileChooserDialog::new(
+            Some("Save"),
+            Some(self),
+            gtk::FileChooserAction::Save,
+            &buttons,
+            );
+        dialog.set_current_name("dataviewer.dv.toml");
+
+        let window = self.clone();
+        dialog.connect_response(move |file, response| {
+            file.hide();
+            if response != gtk::ResponseType::Ok {
+                return;
+            }
+            let filename = match file.file() {
+                Some(filename) => filename,
+                None => {return;},
+            };
+            let filename = match filename.path() {
+                Some(filename) => filename,
+                None => {return;},
+            };
+            let notebook = window.get_notebook();
+            let i = match notebook.current_page() {
+                Some(i) => i,
+                None => {return;},
+            };
+            let page = match notebook.pages().item(i) {
+                Some(page) => page.downcast::<gtk::NotebookPage>().unwrap(),
+                None => {return;},
+            };
+            let draw_area = page.child().downcast::<gtk::DrawingArea>().unwrap();
+            let context = draw_area.get_context();
+            println!("Saving file under {:?}", filename);
+            let _ = context.dataviewer.save_as(&filename);
+        });
+
+        let button = gtk::Button::with_label("Save");
+        button.connect_clicked(move |_| {
+            dialog.present();
+        });
+        button
+    }
+
+    fn new_export_button(&self) -> gtk::Button {
+        // Create the Open File button and Dialog
+        let buttons = [
+            ("Export as PNG", gtk::ResponseType::Ok),
+        ];
+        let dialog = gtk::FileChooserDialog::new(
+            Some("Export as PNG"),
+            Some(self),
+            gtk::FileChooserAction::Save,
+            &buttons,
+            );
+        dialog.set_current_name("dataviewer.png");
+
+        let window = self.clone();
+        dialog.connect_response(move |file, response| {
+            file.hide();
+            if response != gtk::ResponseType::Ok {
+                return;
+            }
+            let filename = match file.file() {
+                Some(filename) => filename,
+                None => {return;},
+            };
+            let filename = match filename.path() {
+                Some(filename) => filename,
+                None => {return;},
+            };
+            let notebook = window.get_notebook();
+            let i = match notebook.current_page() {
+                Some(i) => i,
+                None => {return;},
+            };
+            let page = match notebook.pages().item(i) {
+                Some(page) => page.downcast::<gtk::NotebookPage>().unwrap(),
+                None => {return;},
+            };
+            let draw_area = page.child().downcast::<gtk::DrawingArea>().unwrap();
+            let context = draw_area.get_context();
+            println!("Export image under {:?}", filename);
+            if let Err(e) = context.dataviewer.export_as_png(&draw_area, &filename) {
+                println!("Failed to export image: {:?}", e);
+            }
+        });
+
+        let button = gtk::Button::with_label("Export PNG");
+        button.connect_clicked(move |_| {
+            dialog.present();
+        });
+        button
     }
 }
 

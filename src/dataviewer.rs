@@ -59,6 +59,26 @@ impl DataViewer {
         Ok(())
     }
 
+    pub fn save_as(&self, path: &std::path::Path) -> Result<()> {
+        let toml = toml::to_string(&self.file)?;
+        std::fs::write(path, toml)?;
+        Ok(())
+    }
+
+    pub fn export_as_png(&mut self, area: &gtk::DrawingArea, path: &std::path::Path) -> Result<()> {
+        let width = self.width as i32;
+        let height = self.height as i32;
+        let surface = cairo::ImageSurface::create(cairo::Format::ARgb32, width, height)?;
+        let cairo = cairo::Context::new(&surface)?;
+        cairo.set_source_rgb(1.0, 1.0, 1.0);
+        cairo.fill()?;
+        cairo.paint()?;
+        self.draw(area, &cairo, width, height);
+        let mut file = std::fs::File::create(path)?;
+        surface.write_to_png(&mut file)?;
+        Ok(())
+    }
+
     pub fn update(&mut self, update: dataview::File) {
         for (key, value) in update.data {
             let data = self.file.data.get_mut(&key);
@@ -83,6 +103,7 @@ impl DataViewer {
             None => {return;},
         };
         let canvas = Canvas::new(area, cairo, width, height, self.mouse_xref, self.mouse_yref, &self.view);
+        cairo.set_source_rgb(0.0, 0.0, 0.0);
         chart.draw(&canvas, &self.file);
         canvas.draw(&self.file);
     }
