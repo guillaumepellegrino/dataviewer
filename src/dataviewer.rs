@@ -2,7 +2,6 @@ use gtk4 as gtk;
 use gtk::cairo;
 use gtk::prelude::*;
 use gtk::glib::source;
-use std::path::PathBuf;
 use crate::canvas::Canvas;
 use crate::chart::chart::{View, Chart};
 use crate::chart::*;
@@ -37,12 +36,6 @@ impl DataViewer {
             redraw_timer: None,
             draw_area: None,
         }
-    }
-
-    pub fn open(&mut self, path: &PathBuf) -> Result<()> {
-        let string = std::fs::read_to_string(path)?;
-        let file = toml::from_str(&string)?;
-        self.load(file)
     }
 
     pub fn load(&mut self, file: dataview::File) -> Result<()> {

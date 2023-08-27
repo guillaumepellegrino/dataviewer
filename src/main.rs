@@ -1,46 +1,45 @@
 use gtk4 as gtk;
 use gtk::{glib, gio};
 use gtk::prelude::*;
-use std::rc::{Rc, Weak};
+use std::rc::{Rc};
 use std::cell::RefCell;
 use std::path::PathBuf;
-use std::collections::{VecDeque};
 use eyre::{Result};
 
 mod canvas;
 mod chart;
 mod dataview;
 mod dataviewer;
+mod stream;
 mod utils;
 
-struct AppContext {
-    files: Vec<PathBuf>,
+static ME: &str = "dv";
+
+/// Extend DataViewer Window with some utils functions
+trait ApplicationDVExt {
+    fn new_dataviewer_window(&self) -> gtk::Window;
+    fn find_empty_window(&self) -> Option<gtk::Window>;
 }
 
-struct WindowContext {
-    _window: gtk::ApplicationWindow,
-    notebook: gtk::Notebook,
-    dataviewers: Vec<Weak<RefCell<dataviewer::DataViewer>>>,
+/// Extend DataViewer Window with some utils functions
+trait WindowDVExt {
+    fn new_draw_area(&self, file: dataview::File, label: &str) -> Result<gtk::DrawingArea>;
+    fn new_draw_area_from_file(&self, path: &PathBuf) -> Result<gtk::DrawingArea>;
+    fn get_notebook(&self) -> gtk::Notebook;
 }
 
-impl AppContext {
-    pub fn new() -> Self {
-        Self {
-            files: vec!(),
-        }
-    }
-
-    pub fn files(&mut self) -> &mut Vec<PathBuf> {
-        &mut self.files
-    }
+/// Extend DataViewer Notebook (tabs) with some utils functions
+trait DrawingAreaDVExt {
+    fn set_context(&self, context: DrawingAreaContext);
+    fn get_context<'a>(&'a self) -> &'a mut DrawingAreaContext;
 }
 
-impl WindowContext {
-    pub fn new(app: &gtk::Application) -> Self {
+impl ApplicationDVExt for gtk::Application {
+    fn new_dataviewer_window(&self) -> gtk::Window {
         println!("New window !");
         // Create a new window (the user may open multiple windows)
         let window = gtk::ApplicationWindow::builder()
-            .application(app)
+            .application(self)
             .default_width(900)
             .default_height(600)
             .title("Data Viewer")
@@ -51,12 +50,6 @@ impl WindowContext {
         let notebook = gtk::Notebook::new();
         window.set_child(Some(&notebook));
 
-        let context = Self {
-            _window: window.clone(),
-            notebook: notebook.clone(),
-            dataviewers: vec!(),
-        };
-
         // Create the Open File button and Dialog
         let buttons = [("Open", gtk::ResponseType::Ok)];
         let openfile = gtk::FileChooserDialog::new(
@@ -65,6 +58,8 @@ impl WindowContext {
             gtk::FileChooserAction::Open,
             &buttons,
             );
+
+        let windowref = window.clone().upcast::<gtk::Window>();
         openfile.connect_response(move |file, response| {
             file.hide();
             if response != gtk::ResponseType::Ok {
@@ -79,7 +74,7 @@ impl WindowContext {
                 None => {return;},
             };
             println!("Opening {:?}", filename);
-            WindowContext::dataviewer_from_file(&notebook, &filename);
+            let _ = windowref.new_draw_area_from_file(&filename);
         });
         let openbutton = gtk::Button::with_label("Open");
         openbutton.connect_clicked(move |_| {
@@ -104,86 +99,64 @@ impl WindowContext {
 
         window.set_titlebar(Some(&titlebar));
         window.show();
-        context
-    } 
+        window.into()
+    }
 
-    // Duplicate functions bellow. need to be fixed
-    pub fn new_dataviewer(&mut self, file: dataview::File) -> Result<Rc<RefCell<dataviewer::DataViewer>>> {
+    fn find_empty_window(&self) -> Option<gtk::Window> {
+        for window in self.windows() {
+            let notebook = window.get_notebook();
+            if notebook.pages().n_items() == 0 {
+                return Some(window);
+            }
+        }
+        None
+    }
+}
+
+impl WindowDVExt for gtk::Window {
+    fn new_draw_area(&self, file: dataview::File, label: &str) -> Result<gtk::DrawingArea> {
         let dataviewer = Rc::new(RefCell::new(dataviewer::DataViewer::new()));
         dataviewer.borrow_mut().load(file)?;
         let draw_area = new_draw_area_from_dataviewer(dataviewer.clone());
-        let label = gtk::Label::new(Some("Unknown"));
-        self.notebook.append_page(&draw_area, Some(&label));
-        draw_area.queue_draw();
-
-        let weak = Rc::<RefCell<dataviewer::DataViewer>>::downgrade(&dataviewer);
-        self.dataviewers.push(weak);
-
-        Ok(dataviewer)
-    }
-    pub fn new_dataviewer_from_file(&self, path: &PathBuf) {
-        let dataviewer = Rc::new(RefCell::new(dataviewer::DataViewer::new()));
-        if let Err(e) = dataviewer.borrow_mut().open(&path) {
-            println!("Failed to open {:?}: {:?}", path, e);
-        }
-        let draw_area = new_draw_area_from_dataviewer(dataviewer);
-        let filename = path.file_name().unwrap().to_string_lossy();
-        let label = gtk::Label::new(Some(&filename));
-        self.notebook.append_page(&draw_area, Some(&label));
-        draw_area.queue_draw();
-    }
-    pub fn dataviewer_from_file(notebook: &gtk::Notebook, path: &PathBuf) {
-        let dataviewer = Rc::new(RefCell::new(dataviewer::DataViewer::new()));
-        if let Err(e) = dataviewer.borrow_mut().open(&path) {
-            println!("Failed to open {:?}: {:?}", path, e);
-        }
-        let draw_area = new_draw_area_from_dataviewer(dataviewer);
-        let filename = path.file_name().unwrap().to_string_lossy();
-        let label = gtk::Label::new(Some(&filename));
+        let label = gtk::Label::new(Some(label));
+        let notebook = self.get_notebook();
         notebook.append_page(&draw_area, Some(&label));
         draw_area.queue_draw();
+        Ok(draw_area)
     }
 
+    fn new_draw_area_from_file(&self, path: &PathBuf) -> Result<gtk::DrawingArea> {
+        let filename = path.file_name().unwrap().to_string_lossy();
+        let string = std::fs::read_to_string(path)?;
+        let file = toml::from_str(&string)?;
+        self.new_draw_area(file, &filename)
+    }
+
+    fn get_notebook(&self) -> gtk::Notebook {
+        let widget = self.child().unwrap();
+        widget.downcast::<gtk::Notebook>().unwrap()
+    }
 }
 
-struct Stream {
-    buffer: std::collections::VecDeque::<u8>,
-    input: gio::InputStream,
-}
-
-impl Stream {
-    fn new(iostream: &gio::SocketConnection) -> Self {
-        Self {
-            buffer: VecDeque::new(),
-            input: iostream.input_stream(),
+// Get or Set our internal context from a Notebook
+impl DrawingAreaDVExt for gtk::DrawingArea {
+    fn set_context(&self, context: DrawingAreaContext) {
+        unsafe {
+            self.set_data::<DrawingAreaContext>(ME, context);
         }
     }
 
-    async fn read_utf8_upto(&mut self, upto: u8) -> String {
-        let mut string = String::new();
-        loop {
-            while let Some(c) = self.buffer.pop_front() {
-                if c == upto {
-                    return string;
-                }
-                if c.is_ascii() {
-                    string.push(c as char);
-                }
-            }
-
-            let mut buffer = Vec::<u8>::with_capacity(4096);
-            buffer.resize(4096, 0);
-            let (mut buffer, size) = self.input.read_future(buffer, glib::source::Priority::DEFAULT)
-                .await.unwrap();
-
-            buffer.truncate(size);
-            self.buffer.extend(buffer);
-
-            if size == 0 {
-                panic!("end of file");
-            }
+    fn get_context<'a>(&'a self) -> &'a mut DrawingAreaContext {
+        unsafe {
+            self.data::<DrawingAreaContext>(ME).unwrap().as_mut()
         }
     }
+}
+
+// Should store the dataviewer context
+struct DrawingAreaContext {
+    // FIXME: We can probably remove Rc<RefCell<T>>
+    dataviewer: Rc<RefCell<dataviewer::DataViewer>>,
 }
 
 fn new_draw_area_from_dataviewer(g_dataviewer: Rc<RefCell<dataviewer::DataViewer>>) -> gtk::DrawingArea {
@@ -191,6 +164,13 @@ fn new_draw_area_from_dataviewer(g_dataviewer: Rc<RefCell<dataviewer::DataViewer
     let draw_area = gtk::DrawingArea::new();
     draw_area.set_content_width(128);
     draw_area.set_content_height(128);
+
+    // Set the Draw Area Context
+    draw_area.set_context(DrawingAreaContext {
+        dataviewer: g_dataviewer.clone(),
+    });
+
+    let _= draw_area.get_context();
 
     // Notify DataViewer when canvas need to be redraw
     let dataviewer = g_dataviewer.clone();
@@ -249,29 +229,26 @@ fn new_draw_area_from_dataviewer(g_dataviewer: Rc<RefCell<dataviewer::DataViewer
     });
     draw_area.add_controller(scroll_ctl);
 
-
-
     draw_area
 }
 
-fn server_handle_update(window: &WindowContext, update: dataview::File) {
-    let dataviewer = match window.dataviewers.first() {
-        Some(dataviewer) => dataviewer,
+fn server_handle_update(window: &gtk::Window, update: dataview::File) {
+    let notebook = window.get_notebook();
+    let page = match notebook.pages().item(0) {
+        Some(page) => page.downcast::<gtk::NotebookPage>().unwrap(),
         None => {return;},
     };
-    let dataviewer = match dataviewer.upgrade() {
-        Some(dataviewer) => dataviewer,
-        None => {return;},
-    };
-    let mut dataviewer = dataviewer.borrow_mut();
+    let draw_area = page.child().downcast::<gtk::DrawingArea>().unwrap();
+    let context = draw_area.get_context();
+    let mut dataviewer = context.dataviewer.borrow_mut();
     dataviewer.update(update);
 }
-  
-fn server_handle_message(window: &mut WindowContext, file: dataview::File) {
+
+fn server_handle_message(window: &gtk::Window, file: dataview::File) {
      println!("message = {:?}", file);
 
      if !file.chart.is_empty() {
-         window.new_dataviewer(file).unwrap();
+         let _ = window.new_draw_area(file, "ipc://tmp/dataviewer.ipc");
      }
      else if !file.data.is_empty() {
          server_handle_update(window, file);
@@ -302,17 +279,19 @@ fn server_new(app: &gtk::Application) {
             let (client,_) = listener.accept_future().await.unwrap();
             println!("New ipc client connected: Opening a new Window");
 
-            // Read dataview::File from ipc socket
-            let mut window = WindowContext::new(&app);
+            let window = match app.find_empty_window() {
+                Some(window) => window,
+                None => app.new_dataviewer_window(),
+            };
 
+            // Read dataview::File from ipc socket
             let main_context = glib::MainContext::default();
             main_context.spawn_local(async move {
-                let mut stream = Stream::new(&client);
+                let mut stream = stream::Stream::new(&client);
                 loop {
                     let buff = stream.read_utf8_upto(0).await;
-                    //let update : HashMap<String, dataview::Data> = toml::from_str(&buff).unwrap();
                     let message : dataview::File = toml::from_str(&buff).unwrap();
-                    server_handle_message(&mut window, message);
+                    server_handle_message(&window, message);
                 }
             });
         }
@@ -328,39 +307,21 @@ fn main() -> glib::ExitCode {
         .flags(flags)
         .build();
 
-    let g_context = Rc::new(RefCell::new(AppContext::new()));
-    let context = g_context.clone();
-
     app.connect_command_line(move |app, cmdline| {
-        let mut context = context.borrow_mut();
+        let window = app.new_dataviewer_window();
         let cwd = match cmdline.cwd() {
             Some(cwd) => cwd,
             None => {return 1;},
         };
-        for arg in cmdline.arguments() {
+        for arg in cmdline.arguments().iter().skip(1) {
             let path = PathBuf::from(arg);
             let path = match path.is_absolute() {
                 true => path,
                 false => cwd.join(path),
             };
-            context.files().push(path);
+            let _ = window.new_draw_area_from_file(&path);
         }
-        drop(context);
-        app.activate();
         0
-    });
-
-    let context = g_context.clone();
-    app.connect_activate(move |app| {
-        let mut context = context.borrow_mut();
-        let window = WindowContext::new(app);
-
-        // Check if there are files to open
-        let files = context.files();
-        for file in files.iter().skip(1) {
-            window.new_dataviewer_from_file(&file);
-        }
-        files.clear();
     });
     app.connect_startup(move |app| {
         server_new(app);
