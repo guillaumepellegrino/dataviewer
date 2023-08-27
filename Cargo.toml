@@ -8,7 +8,7 @@ repository = "https://github.com/guillaumepellegrino/dataviewer"
 license = "GPL-3.0-or-later"
 authors = ["Guillaume Pellegrino <guillaume.pellegrino@yahoo.com>"]
 keywords = ["gtk", "data", "viewer", "plot"]
-categories = ["application"]
+categories = ["visualization"]
 
 [dependencies]
 png = "0.9.0"
