@@ -19,8 +19,11 @@ pub trait WindowDVExt {
     fn new_draw_area_from_file(&self, path: &PathBuf) -> Result<gtk::DrawingArea>;
     fn get_notebook(&self) -> gtk::Notebook;
     fn new_open_button(&self) -> gtk::Button;
+    fn new_autoview_button(&self) -> gtk::Button;
     fn new_save_button(&self) -> gtk::Button;
     fn new_export_button(&self) -> gtk::Button;
+    fn set_context(&self, context: WindowContext);
+    fn get_context<'a>(&'a self) -> &'a mut WindowContext;
 }
 
 /// Extend DataViewer Notebook (tabs) with some utils functions
@@ -29,6 +32,8 @@ pub trait DrawingAreaDVExt {
     fn set_context(&self, context: DrawingAreaContext);
     fn get_context<'a>(&'a self) -> &'a mut DrawingAreaContext;
 }
+
+pub struct WindowContext {}
 
 pub struct DrawingAreaContext {
     pub dataviewer: dataviewer::DataViewer,
@@ -47,6 +52,8 @@ impl ApplicationDVExt for gtk::Application {
             .build()
             .upcast::<gtk::Window>();
 
+        window.set_context(WindowContext {});
+
         // Create the title bar
         let titlebar = gtk::HeaderBar::new();
         // Create the notebook (tabs manager)
@@ -61,6 +68,9 @@ impl ApplicationDVExt for gtk::Application {
 
         titlebar.pack_end(
             &window.new_export_button());
+
+        titlebar.pack_end(
+            &window.new_autoview_button());
 
         window.set_titlebar(Some(&titlebar));
         window.show();
@@ -137,6 +147,26 @@ impl WindowDVExt for gtk::Window {
         let button = gtk::Button::with_label("Open");
         button.connect_clicked(move |_| {
             dialog.present();
+        });
+        button
+    }
+
+    fn new_autoview_button(&self) -> gtk::Button {
+        let window = self.clone();
+        let button = gtk::Button::with_label("AutoView");
+        button.connect_clicked(move |_| {
+            let notebook = window.get_notebook();
+            let i = match notebook.current_page() {
+                Some(i) => i,
+                None => {return;},
+            };
+            let page = match notebook.pages().item(i) {
+                Some(page) => page.downcast::<gtk::NotebookPage>().unwrap(),
+                None => {return;},
+            };
+            let draw_area = page.child().downcast::<gtk::DrawingArea>().unwrap();
+            let context = draw_area.get_context();
+            context.dataviewer.set_autoview(true);
         });
         button
     }
@@ -239,6 +269,18 @@ impl WindowDVExt for gtk::Window {
             dialog.present();
         });
         button
+    }
+
+    fn set_context(&self, context: WindowContext) {
+        unsafe {
+            self.set_data::<WindowContext>(ME, context);
+        }
+    }
+
+    fn get_context<'a>(&'a self) -> &'a mut WindowContext {
+        unsafe {
+            self.data::<WindowContext>(ME).unwrap().as_mut()
+        }
     }
 }
 

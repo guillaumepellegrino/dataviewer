@@ -19,6 +19,7 @@ pub struct DataViewer {
     mouse_yref: f64,
     redraw_timer: Option<source::SourceId>,
     draw_area: Option<gtk::DrawingArea>,
+    autoview: bool,
 }
 
 
@@ -35,6 +36,7 @@ impl DataViewer {
             mouse_yref: 0.0,
             redraw_timer: None,
             draw_area: None,
+            autoview: true,
         }
     }
 
@@ -88,7 +90,7 @@ impl DataViewer {
             };
             data.extend(value);
         }
-        if !self.mouse_is_pressed() {
+        if self.autoview {
             self.view = self.chart.as_ref().unwrap().view(&self.file);
         }
         self.queue_redraw();
@@ -124,6 +126,8 @@ impl DataViewer {
         let dy = (dy * view_y) / self.height;
         self.view.y_min += dy;
         self.view.y_max += dy;
+
+        self.autoview = false;
     }
 
     pub fn mouse_clicked(&mut self, x: f64, y: f64) {
@@ -173,7 +177,20 @@ impl DataViewer {
 
         self.view.y_min -= zoom_y;
         self.view.y_max += zoom_y;
+
+        self.autoview = false;
         println!("NEW View: {:?}", self.view);
+    }
+
+    pub fn set_autoview(&mut self, autoview: bool) {
+        self.autoview = autoview;
+
+        if self.autoview {
+            if let Some(chart) = self.chart.as_ref() {
+                self.view = chart.view(&self.file);
+                self.queue_redraw();
+            }
+        }
     }
 }
 
