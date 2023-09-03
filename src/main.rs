@@ -14,9 +14,24 @@ mod ui;
 mod utils;
 
 fn main() -> glib::ExitCode {
+    // Open ipc listening socket if it's not already running
+    let ipc = match server::ipc_running() {
+        true => Some(server::ipc_listen_socket()),
+        false => None,
+    };
+
+    // deamonize the application if streaming is required
+    for arg in std::env::args() {
+        if arg == "--stream" {
+            let daemon = daemonize::Daemonize::new();
+            if let Err(e) = daemon.start() {
+                println!("Failed to daemonize: {:?}", e);
+            }
+        }
+    }
+
     let mut flags = gio::ApplicationFlags::empty();
     flags.insert(gio::ApplicationFlags::HANDLES_COMMAND_LINE);
-
     let app = gtk::Application::builder()
         .application_id("org.gtk.dataviewer")
         .flags(flags)
@@ -34,12 +49,16 @@ fn main() -> glib::ExitCode {
                 true => path,
                 false => cwd.join(path),
             };
-            let _ = window.new_draw_area_from_file(&path);
+            if let Err(e) = window.new_draw_area_from_file(&path) {
+                println!("Failed to open {:?}: {:?}", path, e);
+            }
         }
         0
     });
     app.connect_startup(move |app| {
-        server::run(app);
+        if let Some(ipc) = ipc.clone() {
+            server::run(app, ipc);
+        }
     });
 
     app.run()

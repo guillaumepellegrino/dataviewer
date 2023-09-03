@@ -26,22 +26,35 @@ fn server_handle_message(window: &gtk::Window, file: dataview::File) {
      }
 }
 
-pub fn run(app: &gtk::Application) {
+pub fn ipc_running() -> bool {
     let ipc_name = "/tmp/dataviewer.ipc";
+
+    match std::os::unix::net::UnixStream::connect(ipc_name) {
+        Ok(_) => true,
+        Err(_) => false,
+    }
+}
+
+pub fn ipc_listen_socket() -> gio::Socket {
+    let ipc_name = "/tmp/dataviewer.ipc";
+    let path = PathBuf::from(ipc_name);
+    let _ = std::fs::remove_file(&path);
+    let address = gio::UnixSocketAddress::new(
+        &PathBuf::from(&path));
+    let server = gio::Socket::new(
+        gio::SocketFamily::Unix,
+        gio::SocketType::Stream,
+        gio::SocketProtocol::Default).unwrap();
+    server.bind(&address, true).unwrap();
+    server.listen().unwrap();
+    println!("Listening on ipc://{}", ipc_name);
+    server
+}
+
+pub fn run(app: &gtk::Application, server: gio::Socket) {
     let main_context = glib::MainContext::default();
     let app = app.clone();
-    println!("Listening on ipc://{}", ipc_name);
     main_context.spawn_local(async move {
-        let path = PathBuf::from(ipc_name);
-        let _ = std::fs::remove_file(&path);
-        let address = gio::UnixSocketAddress::new(
-            &PathBuf::from(&path));
-        let server = gio::Socket::new(
-            gio::SocketFamily::Unix,
-            gio::SocketType::Stream,
-            gio::SocketProtocol::Default).unwrap();
-        server.bind(&address, true).unwrap();
-        server.listen().unwrap();
 
         let listener = gio::SocketListener::new();
         listener.add_socket(&server, None as Option<&glib::Object>).unwrap();

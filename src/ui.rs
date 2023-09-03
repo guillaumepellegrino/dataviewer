@@ -141,7 +141,9 @@ impl WindowDVExt for gtk::Window {
                 None => {return;},
             };
             println!("Opening {:?}", filename);
-            let _ = window.new_draw_area_from_file(&filename);
+            if let Err(e) = window.new_draw_area_from_file(&filename) {
+                println!("Failed to open {:?}: {:?}", filename, e);
+            }
         });
 
         let button = gtk::Button::with_label("Open");
