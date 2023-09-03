@@ -16,8 +16,8 @@ mod utils;
 fn main() -> glib::ExitCode {
     // Open ipc listening socket if it's not already running
     let ipc = match server::ipc_running() {
-        true => Some(server::ipc_listen_socket()),
-        false => None,
+        false => Some(server::ipc_listen_socket()),
+        true => None,
     };
 
     // deamonize the application if streaming is required
