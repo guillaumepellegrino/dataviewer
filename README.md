@@ -27,6 +27,11 @@ https://github.com/guillaumepellegrino/dataviewer/blob/master/src/dataview.rs
 ![alt text](https://github.com/guillaumepellegrino/dataviewer/blob/master/images/DataViewerSpeedTest.png)
 https://github.com/guillaumepellegrino/dataviewer/blob/master/examples/speedtest.dv.toml
 
-## Watch SpeedTest results in real-time
+## Streaming SpeedTest in real-time
 
+![alt text](https://github.com/guillaumepellegrino/dataviewer/blob/master/images/WatchSpeedTest.gif)
 https://github.com/guillaumepellegrino/dataviewer/blob/master/examples/speedtest.sh
+
+Data can be streamed in real-time through an ipc socket defined in /tmp/dataviewer.ipc.
+The ipc is using the same format than files. The only difference is each message/update must be termined by a NULL character.
+So, you may very well cat your dataview file in the ipc terminated by a '\0' followed up by updates each terminated by a '\0'.
