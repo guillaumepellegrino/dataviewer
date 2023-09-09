@@ -44,6 +44,9 @@ fn main() -> glib::ExitCode {
             None => {return 1;},
         };
         for arg in cmdline.arguments().iter().skip(1) {
+            if arg.to_str() == Some("--stream") {
+                continue;
+            }
             let path = PathBuf::from(arg);
             let path = match path.is_absolute() {
                 true => path,

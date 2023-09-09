@@ -33,12 +33,11 @@ impl Stream {
             let (mut buffer, size) = self.input.read_future(buffer, glib::source::Priority::DEFAULT)
                 .await.unwrap();
 
+            if size == 0 {
+                return string;
+            }
             buffer.truncate(size);
             self.buffer.extend(buffer);
-
-            if size == 0 {
-                panic!("end of file");
-            }
         }
     }
 }

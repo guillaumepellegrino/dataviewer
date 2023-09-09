@@ -20,6 +20,67 @@ pub struct Tooltip {
     pub y: f64,
 }
 
+pub struct Color {
+    pub red: f64,
+    pub green: f64,
+    pub blue: f64,
+}
+
+pub struct Palette {
+    colors: Vec<u32>,
+    current: usize,
+}
+
+pub static BLACK: Color = Color {
+    red: 0.0,
+    green: 0.0,
+    blue: 0.0,
+};
+
+impl Color {
+    pub fn rgb(value: u32) -> Self {
+        Self {
+            red: ((value & 0xFF0000) >> 16) as f64 / 255.0,
+            green: ((value & 0x00FF00) >> 8) as f64 / 255.0,
+            blue: ((value & 0x0000FF) >> 0) as f64 / 255.0,
+        }
+    }
+}
+
+impl Palette {
+    pub fn new(colors: Vec<u32>) -> Self {
+        Self {
+            colors: colors,
+            current: 0,
+        }
+    }
+
+    pub fn palette1() -> Self {
+        Self::new(vec!(
+            0x7D092F, // 2
+            0xFB8B24, // 5
+            0x5F0F40, // 1
+            0x795838, // 9
+            0xCB4721, // 4
+            0xAE5E26, // 8
+            0xE36414, // 7
+            0x9A031E, // 3
+            0xEF781C, // 6
+        ))
+    }
+
+    pub fn next(&mut self) -> Color {
+        if self.current >= self.colors.len() {
+            self.current = 0;
+        }
+        let color = Color::rgb(
+            self.colors[self.current]);
+        self.current += 1;
+        color
+    }
+}
+
+
 impl<'a> Canvas<'a> {
     pub fn new(_area: &'a gtk::DrawingArea, cairo: &'a cairo::Context, width: i32, height: i32, mouse_x: f64, mouse_y: f64, view: &View) -> Self {
         Self {
@@ -138,6 +199,7 @@ impl<'a> Canvas<'a> {
     }
 
     pub fn draw_axis(&self) -> &Self {
+        self.set_color(&BLACK);
         let x0 = self.y_axis_pos();
         let y0 = self.x_axis_pos();
         let x_range = self.view.x_max - self.view.x_min;
@@ -167,22 +229,18 @@ impl<'a> Canvas<'a> {
             let _ = self.cairo.show_text(&Self::fmtfloat(y, y_range));
         }
 
-        self.cairo.set_source_rgb(0.0, 0.0, 0.0);
-        self.cairo.stroke()
-            .expect("Cairo stroke failed");
-
-        self
+        self.stroke()
     }
 
     /// Draw main title centered at the top of the canvas
     fn draw_main_title(&self, file: &dataview::File) -> &Self {
+        self.set_color(&BLACK);
         let title = match &file.dataview.title {
             Some(title) => title,
             None => {return self;},
         };
 
         let fontsize = 24.0;
-        self.cairo.set_source_rgb(0.0, 0.0, 0.0);
         self.cairo.set_font_size(fontsize);
 
         let len = (title.len() as f64) * fontsize;
@@ -190,13 +248,12 @@ impl<'a> Canvas<'a> {
         self.cairo.move_to(x, fontsize);
         let _ = self.cairo.show_text(&title);
 
-        self.cairo.stroke()
-            .expect("Cairo stroke failed");
-        self
+        self.stroke()
     }
 
     /// Draw x title axis at the bottom right of the canvas
     fn draw_x_title(&self, file: &dataview::File) -> &Self {
+        self.set_color(&BLACK);
         let mut text = String::new();
         if let Some(title) = &file.dataview.x_title {
             text += title;
@@ -206,7 +263,6 @@ impl<'a> Canvas<'a> {
         };
 
         let fontsize = 12.0;
-        self.cairo.set_source_rgb(0.0, 0.0, 0.0);
         self.cairo.set_font_size(fontsize);
 
         let len = (text.len() as f64) * fontsize;
@@ -214,14 +270,12 @@ impl<'a> Canvas<'a> {
         self.cairo.move_to(x, self.x_axis_pos() + 21.0);
 
         let _ = self.cairo.show_text(&text);
-
-        self.cairo.stroke()
-            .expect("Cairo stroke failed");
-        self
+        self.stroke()
     }
 
     /// Draw y tile axis at the top left of the canvas
     fn draw_y_title(&self, file: &dataview::File) -> &Self {
+        self.set_color(&BLACK);
         let mut text = String::new();
         if let Some(title) = &file.dataview.y_title {
             text += title;
@@ -231,19 +285,14 @@ impl<'a> Canvas<'a> {
         };
 
         let fontsize = 12.0;
-        self.cairo.set_source_rgb(0.0, 0.0, 0.0);
         self.cairo.set_font_size(fontsize);
         self.cairo.move_to(self.y_axis_pos()+2.0, 45.0);
 
         let _ = self.cairo.show_text(&text);
-
-        self.cairo.stroke()
-            .expect("Cairo stroke failed");
-        self
+        self.stroke()
     }
 
     pub fn draw_multiline_text(&self, text: &str, mut xpixel: f64, mut ypixel: f64, fontsize: f64) -> &Self {
-        self.cairo.set_source_rgb(0.0, 0.0, 0.0);
         self.cairo.set_font_size(fontsize);
         let iter = text.split("\n");
 
@@ -259,6 +308,7 @@ impl<'a> Canvas<'a> {
 
     pub fn draw_tooltip(&self, file: &dataview::File, tooltip: &Tooltip) -> &Self {
         println!("Draw tooltip");
+        self.set_color(&BLACK);
         let fontsize = 12.0;
         let xpixel = tooltip.xpixel;
         let ypixel = tooltip.ypixel;
@@ -307,15 +357,21 @@ impl<'a> Canvas<'a> {
         text += &format!("{}: {} {}\n",
             y_title, tooltip.y, y_unit);
         self.draw_multiline_text(&text, xpixel, ypixel, fontsize);
+        self.stroke()
+    }
 
+    pub fn set_color(&self, color: &Color) -> &Self {
+        self.cairo.set_source_rgb(color.red, color.green, color.blue);
+        self
+    }
+
+    pub fn stroke(&self) -> &Self {
+        self.cairo.stroke()
+            .expect("Cairo stroke failed");
         self
     }
 
     pub fn draw(&self, file: &dataview::File) -> &Self {
-        self.cairo.set_source_rgb(0.5, 0.8, 0.8);
-        self.cairo.stroke()
-            .expect("Cairo stroke failed");
-
         self.draw_main_title(file)
             .draw_x_title(file)
             .draw_y_title(file);

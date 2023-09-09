@@ -1,5 +1,5 @@
 use crate::chart::chart::{View, Chart};
-use crate::canvas::{Canvas, Tooltip};
+use crate::canvas::{Canvas, Palette, Tooltip};
 use crate::dataview;
 use crate::utils::PairIterator;
 
@@ -30,7 +30,11 @@ impl Chart for XY {
         let mut tooltip_distance = 200.0;
         canvas.draw_axis();
 
+        let mut palette = Palette::palette1();
         for (key, data) in &file.data {
+            let color = palette.next();
+            canvas.set_color(&color);
+
             let mut iter = PairIterator::new(data);
             let (x0, y0) = match iter.next() {
                 Some(v) => v,
@@ -51,6 +55,7 @@ impl Chart for XY {
                     tooltip_distance = distance;
                 }
             }
+            canvas.stroke();
         }
 
         if let Some(tooltip) = &tooltip {

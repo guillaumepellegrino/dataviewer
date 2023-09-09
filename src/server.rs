@@ -60,21 +60,30 @@ pub fn run(app: &gtk::Application, server: gio::Socket) {
         listener.add_socket(&server, None as Option<&glib::Object>).unwrap();
 
         loop {
+            let app = app.clone();
             let (client,_) = listener.accept_future().await.unwrap();
-            println!("New ipc client connected: Opening a new Window");
-
-            let window = match app.find_empty_window() {
-                Some(window) => window,
-                None => app.new_window(),
-            };
-            window.present();
+            println!("New ipc client connected");
 
             // Read dataview::File from ipc socket
             let main_context = glib::MainContext::default();
             main_context.spawn_local(async move {
                 let mut stream = stream::Stream::new(&client);
+                let mut window = None;
                 loop {
                     let buff = stream.read_utf8_upto(0).await;
+                    if buff.is_empty() {
+                        println!("IPC Connection closed");
+                        break;
+                    }
+                    if window.is_none() {
+                        println!("Opening new window using ipc socket");
+                        window = match app.find_empty_window() {
+                            Some(window) => Some(window),
+                            None => Some(app.new_window()),
+                        };
+                    }
+                    let window = window.as_ref().unwrap();
+
                     let message : dataview::File = toml::from_str(&buff).unwrap();
                     server_handle_message(&window, message);
                 }
