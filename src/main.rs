@@ -53,7 +53,7 @@ fn main() -> glib::ExitCode {
                 false => cwd.join(path),
             };
             if let Err(e) = window.new_draw_area_from_file(&path) {
-                println!("Failed to open {:?}: {:?}", path, e);
+                window.error(e.wrap_err(format!("Failed to open {:?}", &path)));
             }
         }
         0

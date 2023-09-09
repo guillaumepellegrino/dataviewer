@@ -22,6 +22,8 @@ pub trait WindowDVExt {
     fn new_autoview_button(&self) -> gtk::Button;
     fn new_save_button(&self) -> gtk::Button;
     fn new_export_button(&self) -> gtk::Button;
+    fn error_str(&self, msg: &str);
+    fn error(&self, e: eyre::Error);
     fn set_context(&self, context: WindowContext);
     fn get_context<'a>(&'a self) -> &'a mut WindowContext;
 }
@@ -142,7 +144,7 @@ impl WindowDVExt for gtk::Window {
             };
             println!("Opening {:?}", filename);
             if let Err(e) = window.new_draw_area_from_file(&filename) {
-                println!("Failed to open {:?}: {:?}", filename, e);
+                window.error(e.wrap_err(format!("Failed to open {:?}", filename)));
             }
         });
 
@@ -212,7 +214,9 @@ impl WindowDVExt for gtk::Window {
             let draw_area = page.child().downcast::<gtk::DrawingArea>().unwrap();
             let context = draw_area.get_context();
             println!("Saving file under {:?}", filename);
-            let _ = context.dataviewer.save_as(&filename);
+            if let Err(e) = context.dataviewer.save_as(&filename) {
+                window.error(e.wrap_err("Failed to save image"));
+            }
         });
 
         let button = gtk::Button::with_label("Save");
@@ -262,7 +266,7 @@ impl WindowDVExt for gtk::Window {
             let context = draw_area.get_context();
             println!("Export image under {:?}", filename);
             if let Err(e) = context.dataviewer.export_as_png(&draw_area, &filename) {
-                println!("Failed to export image: {:?}", e);
+                window.error(e.wrap_err("Failed to export image"));
             }
         });
 
@@ -271,6 +275,30 @@ impl WindowDVExt for gtk::Window {
             dialog.present();
         });
         button
+    }
+
+    fn error_str(&self, msg: &str) {
+        let dialog = gtk::MessageDialog::builder()
+            .transient_for(self)
+            .title("Data Viewer Error")
+            .text(msg)
+            .message_type(gtk::MessageType::Error)
+            .buttons(gtk::ButtonsType::Ok)
+            .deletable(true)
+            .modal(true)
+            .destroy_with_parent(true)
+            .default_width(400)
+            .default_height(200)
+            .visible(true)
+            .build();
+        dialog.connect_response(|dialog,_| {
+            dialog.destroy();
+        });
+    }
+
+    fn error(&self, e: eyre::Error) {
+        let msg = format!("{:?}", e);
+        self.error_str(&msg);
     }
 
     fn set_context(&self, context: WindowContext) {
