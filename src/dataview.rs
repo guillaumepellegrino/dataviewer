@@ -1,7 +1,7 @@
-/// Definition of the DataView File Format
-use std::collections::HashMap;
 use serde::Deserialize;
 use serde::Serialize;
+/// Definition of the DataView File Format
+use std::collections::HashMap;
 
 #[derive(Debug, PartialEq, Default, Copy, Clone, Deserialize, Serialize)]
 pub enum Type {
@@ -22,7 +22,7 @@ pub struct DataView {
     pub x_max: Option<f64>,
     pub y_min: Option<f64>,
     pub y_max: Option<f64>,
-    pub description: Option<String>
+    pub description: Option<String>,
 }
 
 #[derive(Debug, PartialEq, Default, Clone, Deserialize, Serialize)]

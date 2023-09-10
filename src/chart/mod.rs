@@ -99,4 +99,3 @@ pub trait Chart {
     // Draw the Chart
     fn draw(&self, canvas: &Canvas, file: &dataview::File);
 }
-

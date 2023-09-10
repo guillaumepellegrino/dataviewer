@@ -1,10 +1,10 @@
-use gtk4 as gtk;
-use gtk::{glib, gio};
 use gtk::prelude::*;
-use std::collections::{VecDeque};
+use gtk::{gio, glib};
+use gtk4 as gtk;
+use std::collections::VecDeque;
 
 pub struct Stream {
-    buffer: std::collections::VecDeque::<u8>,
+    buffer: std::collections::VecDeque<u8>,
     input: gio::InputStream,
 }
 
@@ -29,8 +29,11 @@ impl Stream {
             }
 
             let buffer = vec![0; 4096];
-            let (mut buffer, size) = self.input.read_future(buffer, glib::source::Priority::DEFAULT)
-                .await.unwrap();
+            let (mut buffer, size) = self
+                .input
+                .read_future(buffer, glib::source::Priority::DEFAULT)
+                .await
+                .unwrap();
 
             if size == 0 {
                 return string;
@@ -40,4 +43,3 @@ impl Stream {
         }
     }
 }
-

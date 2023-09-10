@@ -1,11 +1,11 @@
-use gtk4 as gtk;
-use gtk::cairo;
-use gtk::prelude::*;
-use gtk::glib::source;
 use crate::canvas::Canvas;
 use crate::chart::*;
 use crate::dataview;
 use eyre::{eyre, Result};
+use gtk::cairo;
+use gtk::glib::source;
+use gtk::prelude::*;
+use gtk4 as gtk;
 
 pub struct DataViewer {
     file: dataview::File,
@@ -20,7 +20,6 @@ pub struct DataViewer {
     draw_area: Option<gtk::DrawingArea>,
     autoview: bool,
 }
-
 
 impl DataViewer {
     pub fn new() -> Self {
@@ -46,14 +45,16 @@ impl DataViewer {
 
         for key in self.file.chart.keys() {
             if self.file.data.get(key).is_none() {
-                self.file.data.insert(key.clone(), vec!());
+                self.file.data.insert(key.clone(), vec![]);
             }
         }
 
         //println!("file: {:?}", file);
         let chart = match self.file.dataview.r#type {
             dataview::Type::XY => Box::new(xy::XY),
-            r#type => {return Err(eyre!("Unimplemented format '{:?}'", r#type));},
+            r#type => {
+                return Err(eyre!("Unimplemented format '{:?}'", r#type));
+            }
         };
         self.view = chart.view(&self.file);
         self.chart = Some(chart);
@@ -85,7 +86,9 @@ impl DataViewer {
             let data = self.file.data.get_mut(&key);
             let data = match data {
                 Some(data) => data,
-                None => {continue;},
+                None => {
+                    continue;
+                }
             };
             data.extend(value);
         }
@@ -95,15 +98,31 @@ impl DataViewer {
         self.queue_redraw();
     }
 
-    pub fn draw(&mut self, area: &gtk::DrawingArea, cairo: &cairo::Context, width: i32, height: i32) {
+    pub fn draw(
+        &mut self,
+        area: &gtk::DrawingArea,
+        cairo: &cairo::Context,
+        width: i32,
+        height: i32,
+    ) {
         self.draw_area = Some(area.clone());
         self.width = width.into();
         self.height = height.into();
         let chart = match &self.chart {
             Some(chart) => chart,
-            None => {return;},
+            None => {
+                return;
+            }
         };
-        let canvas = Canvas::new(area, cairo, width, height, self.mouse_xref, self.mouse_yref, &self.view);
+        let canvas = Canvas::new(
+            area,
+            cairo,
+            width,
+            height,
+            self.mouse_xref,
+            self.mouse_yref,
+            &self.view,
+        );
         cairo.set_source_rgb(0.0, 0.0, 0.0);
         chart.draw(&canvas, &self.file);
         canvas.draw(&self.file);
@@ -167,7 +186,7 @@ impl DataViewer {
         let view_y = self.view.y_max - self.view.y_min;
 
         let (zoom_x, zoom_y) = match dy > 0.0 {
-            true  => (view_x * 0.10, view_y * 0.10),
+            true => (view_x * 0.10, view_y * 0.10),
             false => (-view_x * 0.10, -view_y * 0.10),
         };
 
@@ -192,4 +211,3 @@ impl DataViewer {
         }
     }
 }
-

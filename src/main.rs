@@ -1,8 +1,8 @@
-use gtk4 as gtk;
-use gtk::{glib, gio};
 use gtk::prelude::*;
-use ui::*;
+use gtk::{gio, glib};
+use gtk4 as gtk;
 use std::path::PathBuf;
+use ui::*;
 
 mod canvas;
 mod chart;
@@ -41,7 +41,9 @@ fn main() -> glib::ExitCode {
         let window = app.new_window();
         let cwd = match cmdline.cwd() {
             Some(cwd) => cwd,
-            None => {return 1;},
+            None => {
+                return 1;
+            }
         };
         for arg in cmdline.arguments().iter().skip(1) {
             if arg.to_str() == Some("--stream") {

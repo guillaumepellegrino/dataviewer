@@ -1,7 +1,7 @@
-use gtk4 as gtk;
-use gtk::cairo;
 use crate::chart::View;
 use crate::dataview;
+use gtk::cairo;
+use gtk4 as gtk;
 
 pub struct Canvas<'a> {
     cairo: &'a cairo::Context,
@@ -49,14 +49,11 @@ impl Color {
 
 impl Palette {
     pub fn new(colors: Vec<u32>) -> Self {
-        Self {
-            colors,
-            current: 0,
-        }
+        Self { colors, current: 0 }
     }
 
     pub fn palette1() -> Self {
-        Self::new(vec!(
+        Self::new(vec![
             0x7D092F, // 2
             0xFB8B24, // 5
             0x5F0F40, // 1
@@ -66,28 +63,35 @@ impl Palette {
             0xE36414, // 7
             0x9A031E, // 3
             0xEF781C, // 6
-        ))
+        ])
     }
 
     pub fn next(&mut self) -> Color {
         if self.current >= self.colors.len() {
             self.current = 0;
         }
-        let color = Color::rgb(
-            self.colors[self.current]);
+        let color = Color::rgb(self.colors[self.current]);
         self.current += 1;
         color
     }
 }
 
-
 impl<'a> Canvas<'a> {
-    pub fn new(_area: &'a gtk::DrawingArea, cairo: &'a cairo::Context, width: i32, height: i32, mouse_x: f64, mouse_y: f64, view: &View) -> Self {
+    pub fn new(
+        _area: &'a gtk::DrawingArea,
+        cairo: &'a cairo::Context,
+        width: i32,
+        height: i32,
+        mouse_x: f64,
+        mouse_y: f64,
+        view: &View,
+    ) -> Self {
         Self {
             cairo,
             width: width as f64,
             height: height as f64,
-            mouse_x, mouse_y,
+            mouse_x,
+            mouse_y,
             view: view.clone(),
         }
     }
@@ -147,29 +151,21 @@ impl<'a> Canvas<'a> {
         let abs = view_range;
         if abs > 10000.0 {
             format!("{:.0}", val)
-        }
-        else if abs > 1000.0 {
+        } else if abs > 1000.0 {
             format!("{:.1}", val)
-        }
-        else if abs > 100.0 {
+        } else if abs > 100.0 {
             format!("{:.2}", val)
-        }
-        else if abs > 10.0 {
+        } else if abs > 10.0 {
             format!("{:.3}", val)
-        }
-        else if abs > 0.01 {
+        } else if abs > 0.01 {
             format!("{:.4}", val)
-        }
-        else if abs > 0.001 {
+        } else if abs > 0.001 {
             format!("{:.5}", val)
-        }
-        else if abs > 0.0001 {
+        } else if abs > 0.0001 {
             format!("{:.6}", val)
-        }
-        else if abs > 0.00001 {
+        } else if abs > 0.00001 {
             format!("{:.7}", val)
-        }
-        else {
+        } else {
             format!("{:.8}", val)
         }
     }
@@ -179,8 +175,7 @@ impl<'a> Canvas<'a> {
         let mut y0 = self.y_pixel(0.0);
         if y0 > self.height - margin {
             y0 = self.height - margin;
-        }
-        else if y0 < margin {
+        } else if y0 < margin {
             y0 = margin;
         }
         y0
@@ -191,8 +186,7 @@ impl<'a> Canvas<'a> {
         let mut x0 = self.x_pixel(0.0);
         if x0 > self.width - margin {
             x0 = self.width - margin;
-        }
-        else if x0 < 50.0 {
+        } else if x0 < 50.0 {
             x0 = 50.0;
         }
         x0
@@ -213,7 +207,7 @@ impl<'a> Canvas<'a> {
             let step = x_range / 10.0;
             let start = (self.view.x_min / step).floor() * step;
             let x = start + (i * step);
-            self.cairo.move_to(self.x_pixel(x), y0+10.0);
+            self.cairo.move_to(self.x_pixel(x), y0 + 10.0);
             let _ = self.cairo.show_text(&Self::fmtfloat(x, x_range));
         }
 
@@ -225,7 +219,7 @@ impl<'a> Canvas<'a> {
             let step = y_range / 10.0;
             let start = (self.view.y_min / step).floor() * step;
             let y = start + (i * step);
-            self.cairo.move_to(x0-40.0, self.y_pixel(y));
+            self.cairo.move_to(x0 - 40.0, self.y_pixel(y));
             let _ = self.cairo.show_text(&Self::fmtfloat(y, y_range));
         }
 
@@ -237,14 +231,16 @@ impl<'a> Canvas<'a> {
         self.set_color(&BLACK);
         let title = match &file.dataview.title {
             Some(title) => title,
-            None => {return self;},
+            None => {
+                return self;
+            }
         };
 
         let fontsize = 24.0;
         self.cairo.set_font_size(fontsize);
 
         let len = (title.len() as f64) * fontsize;
-        let x = (self.width - len/2.0) / 2.0;
+        let x = (self.width - len / 2.0) / 2.0;
         self.cairo.move_to(x, fontsize);
         let _ = self.cairo.show_text(title);
 
@@ -286,13 +282,19 @@ impl<'a> Canvas<'a> {
 
         let fontsize = 12.0;
         self.cairo.set_font_size(fontsize);
-        self.cairo.move_to(self.y_axis_pos()+2.0, 45.0);
+        self.cairo.move_to(self.y_axis_pos() + 2.0, 45.0);
 
         let _ = self.cairo.show_text(&text);
         self.stroke()
     }
 
-    pub fn draw_multiline_text(&self, text: &str, mut xpixel: f64, mut ypixel: f64, fontsize: f64) -> &Self {
+    pub fn draw_multiline_text(
+        &self,
+        text: &str,
+        mut xpixel: f64,
+        mut ypixel: f64,
+        fontsize: f64,
+    ) -> &Self {
         self.cairo.set_font_size(fontsize);
         let iter = text.split('\n');
 
@@ -313,8 +315,8 @@ impl<'a> Canvas<'a> {
         let xpixel = tooltip.xpixel;
         let ypixel = tooltip.ypixel;
         self.cairo.move_to(xpixel, ypixel);
-        self.cairo.arc(xpixel, ypixel, 5.0, 0.0, 2.0 * std::f64::consts::PI);
-
+        self.cairo
+            .arc(xpixel, ypixel, 5.0, 0.0, 2.0 * std::f64::consts::PI);
 
         let mut text = String::new();
         /*
@@ -343,8 +345,7 @@ impl<'a> Canvas<'a> {
             Some(x_unit) => x_unit,
             None => "",
         };
-        text += &format!("{}: {} {}\n",
-            x_title, tooltip.x, x_unit);
+        text += &format!("{}: {} {}\n", x_title, tooltip.x, x_unit);
 
         let y_title = match &file.dataview.y_title {
             Some(y_title) => y_title,
@@ -354,20 +355,19 @@ impl<'a> Canvas<'a> {
             Some(y_unit) => y_unit,
             None => "",
         };
-        text += &format!("{}: {} {}\n",
-            y_title, tooltip.y, y_unit);
+        text += &format!("{}: {} {}\n", y_title, tooltip.y, y_unit);
         self.draw_multiline_text(&text, xpixel, ypixel, fontsize);
         self.stroke()
     }
 
     pub fn set_color(&self, color: &Color) -> &Self {
-        self.cairo.set_source_rgb(color.red, color.green, color.blue);
+        self.cairo
+            .set_source_rgb(color.red, color.green, color.blue);
         self
     }
 
     pub fn stroke(&self) -> &Self {
-        self.cairo.stroke()
-            .expect("Cairo stroke failed");
+        self.cairo.stroke().expect("Cairo stroke failed");
         self
     }
 

@@ -4,9 +4,7 @@ pub struct PairIterator<'a> {
 
 impl<'a> PairIterator<'a> {
     pub fn new(vec: &'a [f64]) -> Self {
-        Self {
-            iter: vec.iter()
-        }
+        Self { iter: vec.iter() }
     }
 }
 
@@ -16,11 +14,15 @@ impl<'a> Iterator for PairIterator<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         let a = match self.iter.next() {
             Some(a) => a,
-            None => {return None;},
+            None => {
+                return None;
+            }
         };
         let b = match self.iter.next() {
             Some(b) => b,
-            None => {return None;},
+            None => {
+                return None;
+            }
         };
         Some((*a, *b))
     }

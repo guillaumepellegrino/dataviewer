@@ -1,12 +1,11 @@
-use crate::chart::{View, Chart};
 use crate::canvas::{Canvas, Palette, Tooltip};
+use crate::chart::{Chart, View};
 use crate::dataview;
 use crate::utils::PairIterator;
 
 // Plot an XY Chart
 #[derive(Default)]
 pub struct XY;
-
 
 fn squaredistance(x1: f64, y1: f64, x2: f64, y2: f64) -> f64 {
     let x_dt = x2 - x1;
@@ -38,7 +37,9 @@ impl Chart for XY {
             let mut iter = PairIterator::new(data);
             let (x0, y0) = match iter.next() {
                 Some(v) => v,
-                None => {return;},
+                None => {
+                    return;
+                }
             };
             canvas.move_to(x0, y0);
             canvas.circle(x0, y0, 2.0);
@@ -50,7 +51,10 @@ impl Chart for XY {
                 if distance < tooltip_distance {
                     tooltip = Some(Tooltip {
                         key: key.clone(),
-                        x, y, xpixel, ypixel,
+                        x,
+                        y,
+                        xpixel,
+                        ypixel,
                     });
                     tooltip_distance = distance;
                 }
