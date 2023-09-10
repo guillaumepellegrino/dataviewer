@@ -84,7 +84,7 @@ dependencies = [
 
 [[package]]
 name = "dataviewer"
-version = "0.1.4"
+version = "0.1.6"
 dependencies = [
  "cairo-rs",
  "daemonize",
