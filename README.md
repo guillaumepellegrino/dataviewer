@@ -4,14 +4,23 @@ This application allow you to watch your data in real-time (using a simple and d
 
 This crate make it easy to display the data from third-party applications.
 
-GTK4 must be installed to build this application:
+(under development)
+
+# Installation
+Prequites to use dataviewer are:
+
+- Install rust toolchain:
+```
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"
+```
+- Install GTK4 dependency:
 ```
 sudo apt install libgtk-4-dev
 ```
-
-
-(under development)
-
+- Install dataviewer itself from rust package manager:
+```
+cargo install dataviewer --locked
+```
 
 # DataView format
 DataView format is a user-friendly format based on TOML.
