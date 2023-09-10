@@ -1,5 +1,4 @@
 use crate::*;
-use gtk::prelude::*;
 use gtk::{gio, glib};
 use gtk4 as gtk;
 use std::path::PathBuf;

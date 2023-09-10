@@ -1,7 +1,6 @@
 use crate::*;
 use eyre::Result;
 use gtk::glib;
-use gtk::prelude::*;
 use gtk4 as gtk;
 use std::path::Path;
 
