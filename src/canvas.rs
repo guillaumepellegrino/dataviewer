@@ -42,7 +42,7 @@ impl Color {
         Self {
             red: ((value & 0xFF0000) >> 16) as f64 / 255.0,
             green: ((value & 0x00FF00) >> 8) as f64 / 255.0,
-            blue: ((value & 0x0000FF) >> 0) as f64 / 255.0,
+            blue: (value & 0x0000FF) as f64 / 255.0,
         }
     }
 }
@@ -50,7 +50,7 @@ impl Color {
 impl Palette {
     pub fn new(colors: Vec<u32>) -> Self {
         Self {
-            colors: colors,
+            colors,
             current: 0,
         }
     }
@@ -246,7 +246,7 @@ impl<'a> Canvas<'a> {
         let len = (title.len() as f64) * fontsize;
         let x = (self.width - len/2.0) / 2.0;
         self.cairo.move_to(x, fontsize);
-        let _ = self.cairo.show_text(&title);
+        let _ = self.cairo.show_text(title);
 
         self.stroke()
     }
@@ -294,7 +294,7 @@ impl<'a> Canvas<'a> {
 
     pub fn draw_multiline_text(&self, text: &str, mut xpixel: f64, mut ypixel: f64, fontsize: f64) -> &Self {
         self.cairo.set_font_size(fontsize);
-        let iter = text.split("\n");
+        let iter = text.split('\n');
 
         xpixel += 15.0;
         ypixel += 15.0;

@@ -85,7 +85,7 @@ pub fn run(app: &gtk::Application, server: gio::Socket) {
                     let window = window.as_ref().unwrap();
 
                     let message : dataview::File = toml::from_str(&buff).unwrap();
-                    server_handle_message(&window, message);
+                    server_handle_message(window, message);
                 }
             });
         }

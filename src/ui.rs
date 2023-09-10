@@ -25,14 +25,14 @@ pub trait WindowDVExt {
     fn error_str(&self, msg: &str);
     fn error(&self, e: eyre::Error);
     fn set_context(&self, context: WindowContext);
-    fn get_context<'a>(&'a self) -> &'a mut WindowContext;
+    fn get_context(&self) -> &mut WindowContext;
 }
 
 /// Extend DataViewer Notebook (tabs) with some utils functions
 pub trait DrawingAreaDVExt {
     fn from_dataviewer(dataviewer: dataviewer::DataViewer) -> Self;
     fn set_context(&self, context: DrawingAreaContext);
-    fn get_context<'a>(&'a self) -> &'a mut DrawingAreaContext;
+    fn get_context(&self) -> &mut DrawingAreaContext;
 }
 
 pub struct WindowContext {}
@@ -76,7 +76,7 @@ impl ApplicationDVExt for gtk::Application {
 
         window.set_titlebar(Some(&titlebar));
         window.show();
-        window.into()
+        window
     }
 
     // Find a window without any tab opened
@@ -307,7 +307,7 @@ impl WindowDVExt for gtk::Window {
         }
     }
 
-    fn get_context<'a>(&'a self) -> &'a mut WindowContext {
+    fn get_context(&self) -> &mut WindowContext {
         unsafe {
             self.data::<WindowContext>(ME).unwrap().as_mut()
         }
@@ -392,7 +392,7 @@ impl DrawingAreaDVExt for gtk::DrawingArea {
         }
     }
 
-    fn get_context<'a>(&'a self) -> &'a mut DrawingAreaContext {
+    fn get_context(&self) -> &mut DrawingAreaContext {
         unsafe {
             self.data::<DrawingAreaContext>(ME).unwrap().as_mut()
         }

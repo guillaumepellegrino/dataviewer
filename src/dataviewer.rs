@@ -46,14 +46,14 @@ impl DataViewer {
         println!("load: {:?}", self.file);
 
         for (key, _) in &self.file.chart {
-            if self.file.data.get(key) == None {
+            if self.file.data.get(key).is_none() {
                 self.file.data.insert(key.clone(), vec!());
             }
         }
 
         //println!("file: {:?}", file);
         let chart = match self.file.dataview.r#type {
-            dataview::Type::XY => Box::new(xy::XY::default()),
+            dataview::Type::XY => Box::new(xy::XY),
             r#type => {return Err(eyre!("Unimplemented format '{:?}'", r#type));},
         };
         self.view = chart.view(&self.file);
