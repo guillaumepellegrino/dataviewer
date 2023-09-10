@@ -3,14 +3,13 @@ use gtk::cairo;
 use gtk::prelude::*;
 use gtk::glib::source;
 use crate::canvas::Canvas;
-use crate::chart::chart::{View, Chart};
 use crate::chart::*;
 use crate::dataview;
 use eyre::{eyre, Result};
 
 pub struct DataViewer {
     file: dataview::File,
-    chart: Option<Box<dyn chart::Chart>>,
+    chart: Option<Box<dyn Chart>>,
     view: View,
     width: f64,
     height: f64,
@@ -45,7 +44,7 @@ impl DataViewer {
 
         println!("load: {:?}", self.file);
 
-        for (key, _) in &self.file.chart {
+        for key in self.file.chart.keys() {
             if self.file.data.get(key).is_none() {
                 self.file.data.insert(key.clone(), vec!());
             }

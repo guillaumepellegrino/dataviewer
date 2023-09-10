@@ -1,7 +1,7 @@
 use gtk4 as gtk;
 use gtk::{glib};
 use gtk::prelude::*;
-use std::path::PathBuf;
+use std::path::{Path};
 use eyre::{Result};
 use crate::*;
 
@@ -16,7 +16,7 @@ pub trait ApplicationDVExt {
 /// Extend DataViewer Window with some utils functions
 pub trait WindowDVExt {
     fn new_draw_area(&self, file: dataview::File, label: &str) -> Result<gtk::DrawingArea>;
-    fn new_draw_area_from_file(&self, path: &PathBuf) -> Result<gtk::DrawingArea>;
+    fn new_draw_area_from_file(&self, path: &Path) -> Result<gtk::DrawingArea>;
     fn get_notebook(&self) -> gtk::Notebook;
     fn new_open_button(&self) -> gtk::Button;
     fn new_autoview_button(&self) -> gtk::Button;
@@ -25,14 +25,15 @@ pub trait WindowDVExt {
     fn error_str(&self, msg: &str);
     fn error(&self, e: eyre::Error);
     fn set_context(&self, context: WindowContext);
-    fn get_context(&self) -> &mut WindowContext;
+    fn get_context(&self) -> &WindowContext;
 }
 
 /// Extend DataViewer Notebook (tabs) with some utils functions
 pub trait DrawingAreaDVExt {
     fn from_dataviewer(dataviewer: dataviewer::DataViewer) -> Self;
     fn set_context(&self, context: DrawingAreaContext);
-    fn get_context(&self) -> &mut DrawingAreaContext;
+    fn get_context(&self) -> &DrawingAreaContext;
+    fn get_mut_context(&mut self) -> &mut DrawingAreaContext;
 }
 
 pub struct WindowContext {}
@@ -105,7 +106,7 @@ impl WindowDVExt for gtk::Window {
     }
 
     /// Create a new drawing area from a FILE in a new tab from this Window
-    fn new_draw_area_from_file(&self, path: &PathBuf) -> Result<gtk::DrawingArea> {
+    fn new_draw_area_from_file(&self, path: &Path) -> Result<gtk::DrawingArea> {
         let filename = path.file_name().unwrap().to_string_lossy();
         let string = std::fs::read_to_string(path)?;
         let file = toml::from_str(&string)?;
@@ -168,8 +169,8 @@ impl WindowDVExt for gtk::Window {
                 Some(page) => page.downcast::<gtk::NotebookPage>().unwrap(),
                 None => {return;},
             };
-            let draw_area = page.child().downcast::<gtk::DrawingArea>().unwrap();
-            let context = draw_area.get_context();
+            let mut draw_area = page.child().downcast::<gtk::DrawingArea>().unwrap();
+            let context = draw_area.get_mut_context();
             context.dataviewer.set_autoview(true);
         });
         button
@@ -211,8 +212,8 @@ impl WindowDVExt for gtk::Window {
                 Some(page) => page.downcast::<gtk::NotebookPage>().unwrap(),
                 None => {return;},
             };
-            let draw_area = page.child().downcast::<gtk::DrawingArea>().unwrap();
-            let context = draw_area.get_context();
+            let mut draw_area = page.child().downcast::<gtk::DrawingArea>().unwrap();
+            let context = draw_area.get_mut_context();
             println!("Saving file under {:?}", filename);
             if let Err(e) = context.dataviewer.save_as(&filename) {
                 window.error(e.wrap_err("Failed to save image"));
@@ -262,10 +263,11 @@ impl WindowDVExt for gtk::Window {
                 Some(page) => page.downcast::<gtk::NotebookPage>().unwrap(),
                 None => {return;},
             };
-            let draw_area = page.child().downcast::<gtk::DrawingArea>().unwrap();
-            let context = draw_area.get_context();
+            let mut draw_area = page.child().downcast::<gtk::DrawingArea>().unwrap();
+            let draw_area_ref = draw_area.clone();
+            let context = draw_area.get_mut_context();
             println!("Export image under {:?}", filename);
-            if let Err(e) = context.dataviewer.export_as_png(&draw_area, &filename) {
+            if let Err(e) = context.dataviewer.export_as_png(&draw_area_ref, &filename) {
                 window.error(e.wrap_err("Failed to export image"));
             }
         });
@@ -307,9 +309,9 @@ impl WindowDVExt for gtk::Window {
         }
     }
 
-    fn get_context(&self) -> &mut WindowContext {
+    fn get_context(&self) -> &WindowContext {
         unsafe {
-            self.data::<WindowContext>(ME).unwrap().as_mut()
+            self.data::<WindowContext>(ME).unwrap().as_ref()
         }
     }
 }
@@ -329,7 +331,8 @@ impl DrawingAreaDVExt for gtk::DrawingArea {
 
         // Notify DataViewer when canvas need to be redraw
         draw_area.set_draw_func(move |draw_area, cairo, width, height| {
-            let context = draw_area.get_context();
+            let mut draw_area_mut = draw_area.clone();
+            let context = draw_area_mut.get_mut_context();
             println!("Draw area {}x{}", width, height);
             context.dataviewer.draw(draw_area, cairo, width, height);
         });
@@ -338,13 +341,15 @@ impl DrawingAreaDVExt for gtk::DrawingArea {
         let key_ctl = gtk::GestureClick::new();
         let draw_area_ref = draw_area.clone();
         key_ctl.connect_pressed(move |_,_,x,y| {
-            let context = draw_area_ref.get_context();
+            let mut draw_area_mut = draw_area_ref.clone();
+            let context = draw_area_mut.get_mut_context();
             context.dataviewer.mouse_clicked(x, y);
         });
 
         let draw_area_ref = draw_area.clone();
         key_ctl.connect_released(move |_,_,_,_| {
-            let context = draw_area_ref.get_context();
+            let mut draw_area_mut = draw_area_ref.clone();
+            let context = draw_area_mut.get_mut_context();
             context.dataviewer.mouse_released();
         });
         draw_area.add_controller(key_ctl);
@@ -353,20 +358,22 @@ impl DrawingAreaDVExt for gtk::DrawingArea {
         let motion_ctl = gtk::EventControllerMotion::new();
         let draw_area_ref = draw_area.clone();
         motion_ctl.connect_motion(move |_,x,y| {
-            let draw_area_ref2 = draw_area_ref.clone();
-            let context = draw_area_ref.get_context();
+            let draw_area_ref = draw_area_ref.clone();
+            let mut draw_area_mut = draw_area_ref.clone();
+            let context = draw_area_mut.get_mut_context();
             let timer = glib::source::timeout_add_local_once(
                 std::time::Duration::from_millis(50), move ||
             {
                 println!("redraw!");
-                let context = draw_area_ref2.get_context();
+                let mut draw_area_mut = draw_area_ref.clone();
+                let context = draw_area_mut.get_mut_context();
                 context.dataviewer.set_redraw_timer(None);
-                draw_area_ref2.queue_draw();
+                draw_area_mut.queue_draw();
             });
             context.dataviewer.set_redraw_timer(Some(timer));
             context.dataviewer.mouse_moved(x, y);
             if context.dataviewer.mouse_is_pressed() {
-                draw_area_ref.queue_draw();
+                draw_area_mut.queue_draw();
             }
         });
         draw_area.add_controller(motion_ctl);
@@ -376,7 +383,8 @@ impl DrawingAreaDVExt for gtk::DrawingArea {
         let scroll_ctl = gtk::EventControllerScroll::new(
             gtk::EventControllerScrollFlags::VERTICAL);
         scroll_ctl.connect_scroll(move |ctl,_,dy| {
-            let context = draw_area_ref.get_context();
+            let mut draw_area_mut = draw_area_ref.clone();
+            let context = draw_area_mut.get_mut_context();
             context.dataviewer.mouse_scroll(dy);
             ctl.widget().queue_draw();
             glib::signal::Propagation::Proceed
@@ -392,7 +400,13 @@ impl DrawingAreaDVExt for gtk::DrawingArea {
         }
     }
 
-    fn get_context(&self) -> &mut DrawingAreaContext {
+    fn get_context(&self) -> &DrawingAreaContext {
+        unsafe {
+            self.data::<DrawingAreaContext>(ME).unwrap().as_ref()
+        }
+    }
+
+    fn get_mut_context(&mut self) -> &mut DrawingAreaContext {
         unsafe {
             self.data::<DrawingAreaContext>(ME).unwrap().as_mut()
         }

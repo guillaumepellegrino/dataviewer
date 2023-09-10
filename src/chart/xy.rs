@@ -1,4 +1,4 @@
-use crate::chart::chart::{View, Chart};
+use crate::chart::{View, Chart};
 use crate::canvas::{Canvas, Palette, Tooltip};
 use crate::dataview;
 use crate::utils::PairIterator;

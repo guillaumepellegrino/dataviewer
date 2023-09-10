@@ -3,7 +3,7 @@ pub struct PairIterator<'a> {
 }
 
 impl<'a> PairIterator<'a> {
-    pub fn new(vec: &'a Vec<f64>) -> Self {
+    pub fn new(vec: &'a [f64]) -> Self {
         Self {
             iter: vec.iter()
         }

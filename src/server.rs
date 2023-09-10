@@ -10,8 +10,8 @@ fn server_handle_update(window: &gtk::Window, update: dataview::File) {
         Some(page) => page.downcast::<gtk::NotebookPage>().unwrap(),
         None => {return;},
     };
-    let draw_area = page.child().downcast::<gtk::DrawingArea>().unwrap();
-    let context = draw_area.get_context();
+    let mut draw_area = page.child().downcast::<gtk::DrawingArea>().unwrap();
+    let context = draw_area.get_mut_context();
     context.dataviewer.update(update);
 }
 
@@ -29,10 +29,7 @@ fn server_handle_message(window: &gtk::Window, file: dataview::File) {
 pub fn ipc_running() -> bool {
     let ipc_name = "/tmp/dataviewer.ipc";
 
-    match std::os::unix::net::UnixStream::connect(ipc_name) {
-        Ok(_) => true,
-        Err(_) => false,
-    }
+    std::os::unix::net::UnixStream::connect(ipc_name).is_ok()
 }
 
 pub fn ipc_listen_socket() -> gio::Socket {

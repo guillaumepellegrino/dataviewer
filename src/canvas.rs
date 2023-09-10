@@ -1,6 +1,6 @@
 use gtk4 as gtk;
 use gtk::cairo;
-use crate::chart::chart::View;
+use crate::chart::View;
 use crate::dataview;
 
 pub struct Canvas<'a> {
@@ -135,7 +135,7 @@ impl<'a> Canvas<'a> {
     pub fn circle(&self, x: f64, y: f64, len: f64) -> (f64, f64) {
         let x = self.x_pixel(x);
         let y = self.y_pixel(y);
-        self.cairo.arc(x, y, len, 0.0, 2.0 * 3.1415);
+        self.cairo.arc(x, y, len, 0.0, 2.0 * std::f64::consts::PI);
         (x, y)
     }
 
@@ -313,7 +313,7 @@ impl<'a> Canvas<'a> {
         let xpixel = tooltip.xpixel;
         let ypixel = tooltip.ypixel;
         self.cairo.move_to(xpixel, ypixel);
-        self.cairo.arc(xpixel, ypixel, 5.0, 0.0, 2.0 * 3.1415);
+        self.cairo.arc(xpixel, ypixel, 5.0, 0.0, 2.0 * std::f64::consts::PI);
 
 
         let mut text = String::new();

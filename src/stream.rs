@@ -28,8 +28,7 @@ impl Stream {
                 }
             }
 
-            let mut buffer = Vec::<u8>::with_capacity(4096);
-            buffer.resize(4096, 0);
+            let buffer = vec![0; 4096];
             let (mut buffer, size) = self.input.read_future(buffer, glib::source::Priority::DEFAULT)
                 .await.unwrap();
 
