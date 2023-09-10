@@ -31,6 +31,35 @@ https://github.com/guillaumepellegrino/dataviewer/tree/master/examples
 - Format is defined with SERDE here:
 https://github.com/guillaumepellegrino/dataviewer/blob/master/src/dataview.rs
 
+It can be easily read by a human and write by a machine. Example to plot some points:
+```toml
+#!/usr/bin/env dataviewer
+
+[dataview]
+type = "XY"
+title = "Suite"
+x_title = "x"
+y_title = "y"
+description = """
+Suite
+"""
+
+[chart.1]
+title = "Data"
+
+[data]
+1 = [
+0, 0,
+1, 1,
+2, 2,
+3, 4,
+4, 8,
+5, 16,
+6, 32,
+7, 64,
+]
+```
+
 # Examples
 ## View SpeedTest results
 ![alt text](https://github.com/guillaumepellegrino/dataviewer/blob/master/images/DataViewerSpeedTest.png)
