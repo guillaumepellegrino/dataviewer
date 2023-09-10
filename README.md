@@ -35,3 +35,8 @@ https://github.com/guillaumepellegrino/dataviewer/blob/master/examples/speedtest
 Data can be streamed in real-time through an ipc socket defined in /tmp/dataviewer.ipc.
 The ipc is using the same format than files. The only difference is each message/update must be termined by a NULL character.
 So, you may very well cat your dataview file in the ipc terminated by a '\0' followed up by updates each terminated by a '\0'.
+
+## View Top memory allocations over time with memtrace
+![alt text](https://github.com/guillaumepellegrino/dataviewer/blob/master/images/DataViewerMemtrace.png)
+
+https://github.com/guillaumepellegrino/memtrace/blob/v1.1.0/src/agent.c#L359
